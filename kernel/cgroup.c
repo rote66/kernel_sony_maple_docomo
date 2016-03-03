@@ -687,6 +687,9 @@ static void css_set_move_task(struct task_struct *task,
 {
 	lockdep_assert_held(&css_set_lock);
 
+	if (to_cset && !css_set_populated(to_cset))
+		css_set_update_populated(to_cset, true);
+
 	if (from_cset) {
 		struct css_task_iter *it, *pos;
 
