@@ -64,6 +64,13 @@ config IOSCHED_BFQ
 	a low latency to interactive and soft real-time applications.
 	Details in Documentation/block/bfq-iosched.txt
 
+config IOSCHED_ZEN
+	tristate "Zen I/O scheduler"
+	default n
+	---help---
+	FCFS, dispatches are back-inserted, deadlines ensure fairness.
+        Should work best with devices where there is no travel delay.
+
 config BFQ_GROUP_IOSCHED
 	bool "BFQ hierarchical scheduling support"
 	depends on IOSCHED_BFQ && BLK_CGROUP
@@ -112,6 +119,9 @@ choice
 	config DEFAULT_ANXIETY
 		bool "Anxiety" if IOSCHED_ANXIETY=y
 
+	config DEFAULT_ZEN
+		bool "ZEN" if IOSCHED_ZEN=y
+
 	config DEFAULT_NOOP
 		bool "No-op"
 
@@ -126,6 +136,7 @@ config DEFAULT_IOSCHED
 	default "cfq" if DEFAULT_CFQ
 	default "bfq" if DEFAULT_BFQ
 	default "anxiety" if DEFAULT_ANXIETY
+	default "zen" if DEFAULT_ZEN
 	default "noop" if DEFAULT_NOOP
 	default "maple" if DEFAULT_MAPLE
 
