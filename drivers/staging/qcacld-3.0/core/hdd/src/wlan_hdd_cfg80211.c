@@ -13892,7 +13892,6 @@ int wlan_hdd_cfg80211_init(struct device *dev,
 		 (eHDD_DOT11_MODE_11b_ONLY != pCfg->dot11Mode) &&
 		 (eHDD_DOT11_MODE_11g_ONLY != pCfg->dot11Mode))) {
 		wiphy->bands[HDD_NL80211_BAND_5GHZ] = &wlan_hdd_band_5_ghz;
-
 		if (pCfg->dot11p_mode) {
 			wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels =
 				qdf_mem_malloc(sizeof(hdd_channels_5_ghz) +
