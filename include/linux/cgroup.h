@@ -384,6 +384,16 @@ static inline void css_put_many(struct cgroup_subsys_state *css, unsigned int n)
 		percpu_ref_put_many(&css->refcnt, n);
 }
 
+static inline void cgroup_get(struct cgroup *cgrp)
+{
+	css_get(&cgrp->self);
+}
+
+static inline bool cgroup_tryget(struct cgroup *cgrp)
+{
+	return css_tryget(&cgrp->self);
+}
+
 /**
  * task_css_set_check - obtain a task's css_set with extra access conditions
  * @task: the task to obtain css_set for
@@ -495,6 +505,20 @@ static inline struct cgroup *task_cgroup(struct task_struct *task,
 					 int subsys_id)
 {
 	return task_css(task, subsys_id)->cgroup;
+}
+
+static inline struct cgroup *task_dfl_cgroup(struct task_struct *task)
+{
+	return task_css_set(task)->dfl_cgrp;
+}
+
+static inline struct cgroup *cgroup_parent(struct cgroup *cgrp)
+{
+	struct cgroup_subsys_state *parent_css = cgrp->self.parent;
+
+	if (parent_css)
+		return container_of(parent_css, struct cgroup, self);
+	return NULL;
 }
 
 /* no synchronization, the result can only be used as a hint */
