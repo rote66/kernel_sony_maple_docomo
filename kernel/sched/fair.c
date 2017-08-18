@@ -4990,7 +4990,7 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (flags & DEQUEUE_IDLE)
 			update_flags |= SKIP_CPUFREQ;
 
-		update_load_avg(se, update_flags | (flags & DEQUEUE_IDLE));
+		update_load_avg(se, update_flags);
 		update_cfs_shares(se);
 	}
 
