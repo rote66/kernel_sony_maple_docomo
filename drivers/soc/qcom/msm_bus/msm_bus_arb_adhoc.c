@@ -1330,8 +1330,8 @@ static int update_bw_context(struct msm_bus_client_handle *cl, u64 act_ab,
 	if (!slp_ab && !slp_ib)
 		cl->active_only = true;
 	if (DEBUG_REC_TRANSACTION)
-		msm_bus_dbg_rec_transaction(cl, cl->cur_act_ab, cl->cur_slp_ib);
-
+		msm_bus_dbg_rec_transaction(cl, cl->cur_act_ab,
+					    cl->cur_slp_ib);
 	ret = update_path(cl->mas_dev, cl->slv, act_ib, act_ab, slp_ib, slp_ab,
 				cl->cur_act_ab, cl->cur_act_ab,  cl->first_hop,
 				cl->active_only);
