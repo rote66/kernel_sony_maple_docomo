@@ -3514,17 +3514,6 @@ static inline unsigned long cfs_rq_load_avg(struct cfs_rq *cfs_rq)
 
 static int idle_balance(struct rq *this_rq);
 
-static inline unsigned long task_util(struct task_struct *p)
-{
-#ifdef CONFIG_SCHED_WALT
-       if (!walt_disabled && sysctl_sched_use_walt_task_util) {
-               unsigned long demand = p->ravg.demand;
-               return (demand << 10) / walt_ravg_window;
-       }
-#endif
-	return p->se.avg.util_avg;
-}
-
 static inline unsigned long _task_util_est(struct task_struct *p)
 {
 	struct util_est ue = READ_ONCE(p->se.avg.util_est);
@@ -5659,7 +5648,164 @@ struct energy_env {
 	} cap;
 };
 
-static int cpu_util_without(int cpu, struct task_struct *p);
+/*
+ * cpu_util returns the amount of capacity of a CPU that is used by CFS
+ * tasks. The unit of the return value must be the one of capacity so we can
+ * compare the utilization with the capacity of the CPU that is available for
+ * CFS task (ie cpu_capacity).
+ *
+ * cfs_rq.avg.util_avg is the sum of running time of runnable tasks plus the
+ * recent utilization of currently non-runnable tasks on a CPU. It represents
+ * the amount of utilization of a CPU in the range [0..capacity_orig] where
+ * capacity_orig is the cpu_capacity available at the highest frequency,
+ * i.e. arch_scale_cpu_capacity().
+ * The utilization of a CPU converges towards a sum equal to or less than the
+ * current capacity (capacity_curr <= capacity_orig) of the CPU because it is
+ * the running time on this CPU scaled by capacity_curr.
+ *
+ * Nevertheless, cfs_rq.avg.util_avg can be higher than capacity_curr or even
+ * higher than capacity_orig because of unfortunate rounding in
+ * cfs.avg.util_avg or just after migrating tasks and new task wakeups until
+ * the average stabilizes with the new running time. We need to check that the
+ * utilization stays within the range of [0..capacity_orig] and cap it if
+ * necessary. Without utilization capping, a group could be seen as overloaded
+ * (CPU0 utilization at 121% + CPU1 utilization at 80%) whereas CPU1 has 20% of
+ * available capacity. We allow utilization to overshoot capacity_curr (but not
+ * capacity_orig) as it useful for predicting the capacity required after task
+ * migrations (scheduler-driven DVFS).
+ */
+static inline unsigned long cpu_util(int cpu)
+{
+	struct cfs_rq *cfs_rq;
+	unsigned int util;
+
+#ifdef CONFIG_SCHED_WALT
+	if (likely(!walt_disabled && sysctl_sched_use_walt_cpu_util)) {
+		u64 walt_cpu_util = cpu_rq(cpu)->cumulative_runnable_avg;
+
+		walt_cpu_util <<= SCHED_CAPACITY_SHIFT;
+		do_div(walt_cpu_util, walt_ravg_window);
+
+		return min_t(unsigned long, walt_cpu_util,
+			     capacity_orig_of(cpu));
+	}
+#endif
+
+	cfs_rq = &cpu_rq(cpu)->cfs;
+	util = READ_ONCE(cfs_rq->avg.util_avg);
+
+	return min_t(unsigned long, util, capacity_orig_of(cpu));
+}
+
+static inline unsigned long cpu_util_freq(int cpu)
+{
+#ifdef CONFIG_SCHED_WALT
+	u64 walt_cpu_util;
+
+	if (unlikely(walt_disabled || !sysctl_sched_use_walt_cpu_util))
+		return cpu_util(cpu);
+
+	walt_cpu_util = cpu_rq(cpu)->prev_runnable_sum;
+	walt_cpu_util <<= SCHED_CAPACITY_SHIFT;
+	do_div(walt_cpu_util, walt_ravg_window);
+
+	return min_t(unsigned long, walt_cpu_util, capacity_orig_of(cpu));
+#else
+	return cpu_util(cpu);
+#endif
+}
+
+/*
+ * cpu_util_wake: Compute CPU utilization with any contributions from
+ * the waking task p removed.
+ */
+static unsigned long cpu_util_without(int cpu, struct task_struct *p)
+{
+	struct cfs_rq *cfs_rq;
+	unsigned int util;
+
+#ifdef CONFIG_SCHED_WALT
+	/*
+	 * WALT does not decay idle tasks in the same manner
+	 * as PELT, so it makes little sense to subtract task
+	 * utilization from cpu utilization. Instead just use
+	 * cpu_util for this case.
+	 */
+	if (likely(!walt_disabled && sysctl_sched_use_walt_cpu_util))
+		return cpu_util(cpu);
+#endif
+
+	/* Task has no contribution or is new */
+	if (cpu != task_cpu(p) || !READ_ONCE(p->se.avg.last_update_time))
+		return cpu_util(cpu);
+
+	cfs_rq = &cpu_rq(cpu)->cfs;
+	util = READ_ONCE(cfs_rq->avg.util_avg);
+
+	/* Discount task's blocked util from CPU's util */
+	util -= min_t(unsigned int, util, task_util(p));
+
+	/*
+	 * Covered cases:
+	 *
+	 * a) if *p is the only task sleeping on this CPU, then:
+	 *      cpu_util (== task_util) > util_est (== 0)
+	 *    and thus we return:
+	 *      cpu_util_without = (cpu_util - task_util) = 0
+	 *
+	 * b) if other tasks are SLEEPING on this CPU, which is now exiting
+	 *    IDLE, then:
+	 *      cpu_util >= task_util
+	 *      cpu_util > util_est (== 0)
+	 *    and thus we discount *p's blocked utilization to return:
+	 *      cpu_util_without = (cpu_util - task_util) >= 0
+	 *
+	 * c) if other tasks are RUNNABLE on that CPU and
+	 *      util_est > cpu_util
+	 *    then we use util_est since it returns a more restrictive
+	 *    estimation of the spare capacity on that CPU, by just
+	 *    considering the expected utilization of tasks already
+	 *    runnable on that CPU.
+	 *
+	 * Cases a) and b) are covered by the above code, while case c) is
+	 * covered by the following code when estimated utilization is
+	 * enabled.
+	 */
+	if (sched_feat(UTIL_EST)) {
+		unsigned int estimated =
+			READ_ONCE(cfs_rq->avg.util_est.enqueued);
+		
+		/*
+		 * Despite the following checks we still have a small window
+		 * for a possible race, when an execl's select_task_rq_fair()
+		 * races with LB's detach_task():
+		 *
+		 *   detach_task()
+		 *     p->on_rq = TASK_ON_RQ_MIGRATING;
+		 *     ---------------------------------- A
+		 *     deactivate_task()                   \
+		 *       dequeue_task()                     + RaceTime
+		 *         util_est_dequeue()              /
+		 *     ---------------------------------- B
+		 *
+		 * The additional check on "current == p" it's required to
+		 * properly fix the execl regression and it helps in further
+		 * reducing the chances for the above race.
+		 */
+		if (unlikely(task_on_rq_queued(p) || current == p)) {
+			estimated -= min_t(unsigned int, estimated,
+					   (_task_util_est(p) | UTIL_AVG_UNCHANGED));
+		}
+		util = max(util, estimated);
+	}
+	
+	/*
+	 * Utilization (estimated) can exceed the CPU capacity, thus let's
+	 * clamp to the maximum CPU capacity to ensure consistency with
+	 * the cpu_util call.
+	 */
+	return min_t(unsigned long, util, capacity_orig_of(cpu));
+}
 
 /*
  * __cpu_norm_util() returns the cpu util relative to a specific capacity,
@@ -6720,117 +6866,6 @@ done:
 	schedstat_inc(this_rq(), eas_stats.sis_count);
 
 	return target;
-}
-
-/*
- * cpu_util_without: compute cpu utilization without any contributions from *p
- * @cpu: the CPU which utilization is requested
- * @p: the task which utilization should be discounted
- *
- * The utilization of a CPU is defined by the utilization of tasks currently
- * enqueued on that CPU as well as tasks which are currently sleeping after an
- * execution on that CPU.
- *
- * This method returns the utilization of the specified CPU by discounting the
- * utilization of the specified task, whenever the task is currently
- * contributing to the CPU utilization.
- * rq->curr. For that case we should return cpu util with contributions from
- * currently running task p removed.
- */
-static int cpu_util_without(int cpu, struct task_struct *p)
-{
-#ifndef CONFIG_SCHED_WALT
-	struct cfs_rq *cfs_rq;
-#endif
-	unsigned int util;
-
-#ifdef CONFIG_SCHED_WALT
-	/*
-	 * WALT does not decay idle tasks in the same manner
-	 * as PELT, so it makes little sense to subtract task
-	 * utilization from cpu utilization. Instead just use
-	 * cpu_util for this case.
-	 */
-	if (!walt_disabled && sysctl_sched_use_walt_cpu_util &&
-	    p->state == TASK_WAKING)
-		return cpu_util(cpu);
-#endif
-
-	/* Task has no contribution or is new */
-	if (cpu != task_cpu(p) || !READ_ONCE(p->se.avg.last_update_time))
-		return cpu_util(cpu);
-
-#ifdef CONFIG_SCHED_WALT
-	util = max_t(long, cpu_util(cpu) - task_util(p), 0);
-#else
-
-	cfs_rq = &cpu_rq(cpu)->cfs;
-	util = READ_ONCE(cfs_rq->avg.util_avg);
-
-	/* Discount task's util from CPU's util */
-	util -= min_t(unsigned int, util, task_util(p));
-
-	/*
-	 * Covered cases:
-	 *
-	 * a) if *p is the only task sleeping on this CPU, then:
-	 *      cpu_util (== task_util) > util_est (== 0)
-	 *    and thus we return:
-	 *      cpu_util_without = (cpu_util - task_util) = 0
-	 *
-	 * b) if other tasks are SLEEPING on this CPU, which is now exiting
-	 *    IDLE, then:
-	 *      cpu_util >= task_util
-	 *      cpu_util > util_est (== 0)
-	 *    and thus we discount *p's blocked utilization to return:
-	 *      cpu_util_without = (cpu_util - task_util) >= 0
-	 *
-	 * c) if other tasks are RUNNABLE on that CPU and
-	 *      util_est > cpu_util
-	 *    then we use util_est since it returns a more restrictive
-	 *    estimation of the spare capacity on that CPU, by just
-	 *    considering the expected utilization of tasks already
-	 *    runnable on that CPU.
-	 *
-	 * Cases a) and b) are covered by the above code, while case c) is
-	 * covered by the following code when estimated utilization is
-	 * enabled.
-	 */
-	if (sched_feat(UTIL_EST)) {
-		unsigned int estimated =
-			READ_ONCE(cfs_rq->avg.util_est.enqueued);
-
-		/*
-		 * Despite the following checks we still have a small window
-		 * for a possible race, when an execl's select_task_rq_fair()
-		 * races with LB's detach_task():
-		 *
-		 *   detach_task()
-		 *     p->on_rq = TASK_ON_RQ_MIGRATING;
-		 *     ---------------------------------- A
-		 *     deactivate_task()                   \
-		 *       dequeue_task()                     + RaceTime
-		 *         util_est_dequeue()              /
-		 *     ---------------------------------- B
-		 *
-		 * The additional check on "current == p" it's required to
-		 * properly fix the execl regression and it helps in further
-		 * reducing the chances for the above race.
-		 */
-		if (unlikely(task_on_rq_queued(p) || current == p)) {
-			estimated -= min_t(unsigned int, estimated,
-					   (_task_util_est(p) | UTIL_AVG_UNCHANGED));
-		}
-		util = max(util, estimated);
-	}
-#endif
-
-	/*
-	 * Utilization (estimated) can exceed the CPU capacity, thus let's
-	 * clamp to the maximum CPU capacity to ensure consistency with
-	 * the cpu_util call.
-	 */
-	return min_t(unsigned long, util, capacity_orig_of(cpu));
 }
 
 static int start_cpu(bool boosted)
