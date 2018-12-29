@@ -51,8 +51,10 @@ void irqtime_account_irq(struct task_struct *curr)
 	unsigned long flags;
 	s64 delta;
 	int cpu;
+#ifdef CONFIG_SCHED_WALT
 	u64 wallclock;
 	bool account = true;
+#endif
 
 	if (!sched_clock_irqtime)
 		return;
@@ -60,8 +62,10 @@ void irqtime_account_irq(struct task_struct *curr)
 	local_irq_save(flags);
 
 	cpu = smp_processor_id();
+#ifdef CONFIG_SCHED_WALT
 	wallclock = sched_clock_cpu(cpu);
-	delta = wallclock - __this_cpu_read(irq_start_time);
+#endif
+	delta = sched_clock_cpu(cpu) - __this_cpu_read(irq_start_time);
 	__this_cpu_add(irq_start_time, delta);
 
 	irq_time_write_begin();
@@ -75,16 +79,17 @@ void irqtime_account_irq(struct task_struct *curr)
 		__this_cpu_add(cpu_hardirq_time, delta);
 	else if (in_serving_softirq() && curr != this_cpu_ksoftirqd())
 		__this_cpu_add(cpu_softirq_time, delta);
+#ifdef CONFIG_SCHED_WALT
 	else
 		account = false;
+#endif
 
 	irq_time_write_end();
 
+#ifdef CONFIG_SCHED_WALT
 	if (account)
 		walt_account_irqtime(cpu, curr, delta, wallclock);
-	else if (curr != this_cpu_ksoftirqd())
-		sched_account_irqstart(cpu, curr, wallclock);
-
+#endif
 	local_irq_restore(flags);
 }
 EXPORT_SYMBOL_GPL(irqtime_account_irq);
