@@ -739,7 +739,6 @@ void do_exit(long code)
 	smp_mb();
 	raw_spin_unlock_wait(&tsk->pi_lock);
 
-	sched_exit(tsk);
 	schedtune_exit_task(tsk);
 
 	if (unlikely(in_atomic())) {
