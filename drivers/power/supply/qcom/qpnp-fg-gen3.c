@@ -2319,7 +2319,9 @@ static int fg_charge_full_update(struct fg_chip *chip)
 		chip->charge_full);
 #if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	if (chip->charge_done && !chip->charge_full) {
-		if (msoc >= 99 && chip->health == POWER_SUPPLY_HEALTH_GOOD) {
+		if (msoc >= 99 && (chip->health == POWER_SUPPLY_HEALTH_GOOD
+				|| chip->health == POWER_SUPPLY_HEALTH_COOL
+				|| chip->health == POWER_SUPPLY_HEALTH_WARM)) {
 			fg_dbg(chip, FG_STATUS, "Setting charge_full to true\n");
 			chip->charge_full = true;
 			/*
