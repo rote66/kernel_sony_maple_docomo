@@ -78,3 +78,4 @@ obj-$(CONFIG_MMTUNER_MN8855x) += mm_tuner/
 obj-$(CONFIG_ONESEG_TUNER_SMTVJ19X) += oneseg_tuner_drv.o
 obj-$(CONFIG_LDO_VIBRATOR)	+= ldo_vibrator/
 obj-$(CONFIG_SIM_DETECT)	+= sim_detect/
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
