@@ -86,6 +86,12 @@ Byte sequences
                 the dictionary which is empty, and that they will always be
                 invalid at this place.
 
+      17      : bitstream version. If the first byte is 17, and compressed
+                stream length is at least 5 bytes (length of shortest possible
+                versioned bitstream), the next byte gives the bitstream version
+                (version 1 only).
+                Otherwise, the bitstream version is 0.
+
       18..21  : copy 0..3 literals
                 state = (byte - 17) = 0..3  [ copy <state> literals ]
                 skip byte
