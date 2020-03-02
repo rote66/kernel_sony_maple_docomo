@@ -1,4 +1,5 @@
-ccflags-y += -I$(srctree)/drivers/media/platform/msm/vidc/
+ccflags-y += -I$(srctree)/drivers/media/platform/msm/vidc/ \
+		-Wno-frame-larger-than=
 
 msm-vidc-objs := msm_v4l2_vidc.o \
                                 msm_vidc_common.o \
