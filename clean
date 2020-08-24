@@ -4,4 +4,6 @@ make mrproper
 rm -rf out
 rm repack_zip/emp/zImage
 rm -r magisk_module/system
+rm SO-04J_EMP_Kernel_modules_magisk.zip
+rm SO-04J_EMP_Kernel_Beta.zip
 echo "done"

@@ -17,6 +17,7 @@ cd out
 find -name "*.ko" -exec mv {} ../magisk_module/system/lib/modules \;
 cd ..
 repack_zip/emp/strip --strip-unneeded magisk_module/system/lib/modules/*
+mv magisk_module/system/lib/modules/wlan.ko magisk_module/system/lib/modules/qca_cld3_wlan.ko
 
 
 cd repack_zip
@@ -31,5 +32,5 @@ echo "-              Repack      Completed             -"
 echo "--------------------------------------------------"
 echo "-              kernel  by rote66                 -"
 echo "--------------------------------------------------"
-echo "-Cuttting Edge Aftermarket Sony Phone Technology-"
+echo "-Cutting Edge Aftermarket Sony Phone Technology-"
 echo "--------------------------------------------------"
