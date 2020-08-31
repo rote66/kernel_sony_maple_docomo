@@ -122,3 +122,4 @@ obj-$(CONFIG_SUBSYS_LAST_ERR_LOG) += last_subsys_errlog.o
 obj-$(CONFIG_ARCH_MSM8998) += console_setup.o
 obj-$(CONFIG_LAST_LOGS) += last_logs.o
 obj-$(CONFIG_SECURITY_STATUS) += security_status.o
+obj-$(CONFIG_MFSE_QMI) += mfse_qmi_v01.o mfse_qmi.o
