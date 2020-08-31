@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -428,6 +428,32 @@ static int hdd_add_scan_event_from_ies(struct hdd_scan_info *scanInfo,
 	return 0;
 }
 
+void hdd_init_scan_reject_params(hdd_context_t *hdd_ctx)
+{
+	if (hdd_ctx) {
+		hdd_ctx->last_scan_reject_timestamp = 0;
+		hdd_ctx->last_scan_reject_session_id = 0xFF;
+		hdd_ctx->last_scan_reject_reason = 0;
+		hdd_ctx->scan_reject_cnt = 0;
+	}
+
+	return;
+}
+
+void hdd_reset_scan_reject_params(hdd_context_t *hdd_ctx,
+				 eRoamCmdStatus roam_status,
+				 eCsrRoamResult roam_result)
+{
+
+	if ((roam_status == eCSR_ROAM_ASSOCIATION_FAILURE) ||
+	    (roam_status == eCSR_ROAM_CANCELLED) ||
+	    (roam_result == eCSR_ROAM_RESULT_ASSOCIATED)) {
+		hdd_debug("Reset scan reject params");
+		hdd_init_scan_reject_params(hdd_ctx);
+	}
+
+	return;
+}
 
 /**
  * hdd_indicate_scan_result() - indicate scan results
@@ -631,16 +657,18 @@ static void hdd_update_dbs_scan_ctrl_ext_flag(hdd_context_t *hdd_ctx,
 		goto end;
 	}
 
-	if (scan_req->scan_flags & SME_SCAN_FLAG_HIGH_ACCURACY) {
-		hdd_debug("DBS disabled due to high accuracy scan request");
-		goto end;
-	}
-	if (scan_req->scan_flags & SME_SCAN_FLAG_LOW_POWER ||
-	    scan_req->scan_flags & SME_SCAN_FLAG_LOW_SPAN) {
-		hdd_debug("DBS enable due to Low span/power request 0x%x",
-							scan_req->scan_flags);
-		scan_dbs_policy = SME_SCAN_DBS_POLICY_IGNORE_DUTY;
-		goto end;
+	if (hdd_ctx->config->honour_nl_scan_policy_flags) {
+		if (scan_req->scan_flags & SME_SCAN_FLAG_HIGH_ACCURACY) {
+			hdd_debug("DBS disabled for high accuracy request");
+			goto end;
+		}
+		if (scan_req->scan_flags & SME_SCAN_FLAG_LOW_POWER ||
+		    scan_req->scan_flags & SME_SCAN_FLAG_LOW_SPAN) {
+			hdd_debug("DBS enable for Low span/power request 0x%x",
+				  scan_req->scan_flags);
+			scan_dbs_policy = SME_SCAN_DBS_POLICY_IGNORE_DUTY;
+			goto end;
+		}
 	}
 	if (!(hdd_ctx->is_dbs_scan_duty_cycle_enabled)) {
 		scan_dbs_policy = SME_SCAN_DBS_POLICY_IGNORE_DUTY;
@@ -2198,10 +2226,9 @@ static int __wlan_hdd_cfg80211_scan(struct wiphy *wiphy,
 		}
 		return -EBUSY;
 	}
-	pHddCtx->last_scan_reject_timestamp = 0;
-	pHddCtx->last_scan_reject_session_id = 0xFF;
-	pHddCtx->last_scan_reject_reason = 0;
-	pHddCtx->scan_reject_cnt = 0;
+
+	/* reinit the scan reject params */
+	hdd_init_scan_reject_params(pHddCtx);
 
 	/* Check whether SAP scan can be skipped or not */
 	if (pAdapter->device_mode == QDF_SAP_MODE &&
