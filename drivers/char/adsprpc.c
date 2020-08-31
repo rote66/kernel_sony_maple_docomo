@@ -2485,7 +2485,6 @@ static int fastrpc_file_free(struct fastrpc_file *fl)
 	spin_unlock(&fl->hlock);
 	if (!IS_ERR_OR_NULL(fl->init_mem))
 		fastrpc_buf_free(fl->init_mem, 0);
-
 	fastrpc_context_list_dtor(fl);
 	fastrpc_cached_buf_list_free(fl);
 	hlist_for_each_entry_safe(map, n, &fl->maps, hn) {
@@ -2639,7 +2638,6 @@ static ssize_t fastrpc_debugfs_read(struct file *filp, char __user *buffer,
 	struct fastrpc_apps *me = &gfa;
 	struct fastrpc_file *fl = filp->private_data;
 	struct hlist_node *n;
-	struct fastrpc_buf *buf = NULL;
 	struct fastrpc_mmap *map = NULL;
 	struct fastrpc_mmap *gmaps = NULL;
 	struct smq_invoke_ctx *ictx = NULL;
@@ -2798,22 +2796,6 @@ static ssize_t fastrpc_debugfs_read(struct file *filp, char __user *buffer,
 		len += scnprintf(fileinfo + len, DEBUGFS_SIZE - len,
 			"%-20d|0x%-20lX\n\n",
 			map->secure, map->attr);
-		}
-		len += scnprintf(fileinfo + len, DEBUGFS_SIZE - len,
-			"\n======%s %s %s======\n", title,
-			" LIST OF BUFS ", title);
-		spin_lock(&fl->hlock);
-		len += scnprintf(fileinfo + len, DEBUGFS_SIZE - len,
-			"%-19s|%-19s|%-19s\n",
-			"virt", "phys", "size");
-		len += scnprintf(fileinfo + len, DEBUGFS_SIZE - len,
-			"%s%s%s%s%s\n", single_line, single_line,
-			single_line, single_line, single_line);
-		hlist_for_each_entry_safe(buf, n, &fl->cached_bufs, hn) {
-			len += scnprintf(fileinfo + len,
-			DEBUGFS_SIZE - len,
-			"0x%-17p|0x%-17llX|%-19zu\n",
-			buf->virt, (uint64_t)buf->phys, buf->size);
 		}
 		len += scnprintf(fileinfo + len, DEBUGFS_SIZE - len,
 			"\n%s %s %s\n", title,
