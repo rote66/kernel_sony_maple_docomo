@@ -5658,10 +5658,7 @@ QDF_STATUS wma_enable_d0wow_in_fw(WMA_HANDLE handle)
 			"Credits: %d, pending_cmds: %d",
 			wmi_get_host_credits(wma->wmi_handle),
 			wmi_get_pending_cmds(wma->wmi_handle));
-		if (!cds_is_driver_recovering())
-			cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
-		else
-			WMA_LOGE("%s: LOGP is in progress, ignore!", __func__);
+		cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
 
 		return status;
 	}
@@ -5677,11 +5674,7 @@ QDF_STATUS wma_enable_d0wow_in_fw(WMA_HANDLE handle)
 		WMA_LOGE("%s: No Credits after HTC ACK:%d, pending_cmds:%d, cannot resume back",
 			 __func__, host_credits, wmi_pending_cmds);
 		htc_dump_counter_info(wma->htc_handle);
-		if (!cds_is_driver_recovering())
-			cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
-		else
-			WMA_LOGE("%s: SSR in progress, ignore no credit issue",
-				 __func__);
+		cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
 	}
 
 	wma->wow.wow_enable_cmd_sent = true;
@@ -5759,11 +5752,7 @@ QDF_STATUS wma_enable_wow_in_fw(WMA_HANDLE handle, uint32_t wow_flags)
 			 wmi_get_host_credits(wma->wmi_handle),
 			 wmi_get_pending_cmds(wma->wmi_handle));
 		wmi_set_target_suspend(wma->wmi_handle, false);
-		if (!cds_is_driver_recovering()) {
-			cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
-		} else {
-			WMA_LOGE("%s: LOGP is in progress, ignore!", __func__);
-		}
+		cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
 
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -5781,11 +5770,7 @@ QDF_STATUS wma_enable_wow_in_fw(WMA_HANDLE handle, uint32_t wow_flags)
 		WMA_LOGE("%s: No Credits after HTC ACK:%d, pending_cmds:%d, cannot resume back",
 			 __func__, host_credits, wmi_pending_cmds);
 		htc_dump_counter_info(wma->htc_handle);
-		if (!cds_is_driver_recovering())
-			cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
-		else
-			WMA_LOGE("%s: SSR in progress, ignore no credit issue",
-				 __func__);
+		cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
 	}
 
 	WMA_LOGD("WOW enabled successfully in fw: credits:%d pending_cmds: %d",
@@ -6522,13 +6507,8 @@ static QDF_STATUS wma_send_host_wakeup_ind_to_fw(tp_wma_handle wma)
 		WMA_LOGP("%s: Pending commands %d credits %d", __func__,
 			 wmi_get_pending_cmds(wma->wmi_handle),
 			 wmi_get_host_credits(wma->wmi_handle));
-		if (!cds_is_driver_recovering()) {
-			wmi_tag_crash_inject(wma->wmi_handle, true);
-			cds_trigger_recovery(CDS_RESUME_TIMEOUT);
-		} else {
-			WMA_LOGE("%s: SSR in progress, ignore resume timeout",
-				 __func__);
-		}
+		wmi_tag_crash_inject(wma->wmi_handle, true);
+		cds_trigger_recovery(CDS_RESUME_TIMEOUT);
 	} else {
 		WMA_LOGD("Host wakeup received");
 	}
@@ -6578,11 +6558,7 @@ QDF_STATUS wma_disable_d0wow_in_fw(WMA_HANDLE handle)
 		WMA_LOGP("%s: Pending commands: %d credits: %d", __func__,
 			wmi_get_pending_cmds(wma->wmi_handle),
 			wmi_get_host_credits(wma->wmi_handle));
-
-		if (!cds_is_driver_recovering())
-			cds_trigger_recovery(CDS_RESUME_TIMEOUT);
-		else
-			WMA_LOGE("%s: LOGP is in progress, ignore!", __func__);
+		cds_trigger_recovery(CDS_RESUME_TIMEOUT);
 
 		return status;
 	}
@@ -8771,14 +8747,6 @@ static inline void wma_suspend_target_timeout(bool is_self_recovery_enabled)
 	if (cds_is_load_or_unload_in_progress())
 		WMA_LOGE("%s: Module (un)loading; Ignoring suspend timeout",
 			 __func__);
-	else if (cds_is_driver_recovering())
-		WMA_LOGE("%s: Module recovering; Ignoring suspend timeout",
-			 __func__);
-	else if (cds_is_driver_in_bad_state())
-		WMA_LOGE("%s: Module in bad state; Ignoring suspend timeout",
-			 __func__);
-	else if (cds_is_fw_down())
-		WMA_LOGE(FL("FW is down; Ignoring suspend timeout"));
 	else
 		cds_trigger_recovery(CDS_SUSPEND_TIMEOUT);
 }
@@ -8958,12 +8926,7 @@ QDF_STATUS wma_resume_target(WMA_HANDLE handle)
 		WMA_LOGP("%s: Pending commands %d credits %d", __func__,
 			wmi_get_pending_cmds(wma->wmi_handle),
 			wmi_get_host_credits(wma->wmi_handle));
-		if (!cds_is_driver_recovering()) {
-			cds_trigger_recovery(CDS_RESUME_TIMEOUT);
-		} else {
-			WMA_LOGE("%s: SSR in progress, ignore resume timeout",
-				__func__);
-		}
+		cds_trigger_recovery(CDS_RESUME_TIMEOUT);
 	} else {
 		WMA_LOGD("Host wakeup received");
 	}
@@ -10839,6 +10802,26 @@ QDF_STATUS wma_set_sar_limit(WMA_HANDLE handle,
 	return ret;
 }
 
+QDF_STATUS wma_send_coex_config_cmd(WMA_HANDLE wma_handle,
+				    struct coex_config_params *coex_cfg_params)
+{
+	tp_wma_handle wma = (tp_wma_handle)wma_handle;
+
+	if (!wma || !wma->wmi_handle) {
+		WMA_LOGE("%s: WMA is closed, can not issue coex config command",
+			 __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!coex_cfg_params) {
+		WMA_LOGE("%s: coex cfg params ptr NULL", __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return wmi_unified_send_coex_config_cmd(wma->wmi_handle,
+					       coex_cfg_params);
+}
+
 #ifdef WLAN_FEATURE_DISA
 /**
  * wma_encrypt_decrypt_msg() -
@@ -11059,6 +11042,11 @@ int wma_unified_power_debug_stats_event_handler(void *handle,
 	uint32_t power_stats_len, stats_registers_len, *debug_registers;
 
 	tpAniSirGlobal mac = (tpAniSirGlobal)cds_get_context(QDF_MODULE_ID_PE);
+
+	if (!cmd_param_info) {
+		WMA_LOGE("cmd_param_info got NULL");
+		return -EINVAL;
+	}
 
 	param_tlvs =
 		(WMI_PDEV_CHIP_POWER_STATS_EVENTID_param_tlvs *) cmd_param_info;
@@ -11383,21 +11371,25 @@ int wma_pdev_div_info_evt_handler(void *handle, u_int8_t *event_buf,
 		return -EINVAL;
 	}
 
+	if (event->num_chains_valid > CHAIN_MAX_NUM) {
+		WMA_LOGE(FL("Invalid num of chains"));
+		return -EINVAL;
+	}
+
 	WMI_MAC_ADDR_TO_CHAR_ARRAY(&event->macaddr, macaddr);
 	WMA_LOGD(FL("macaddr: " MAC_ADDRESS_STR), MAC_ADDR_ARRAY(macaddr));
 
 	WMA_LOGD(FL("num_chains_valid: %d"), event->num_chains_valid);
 	chain_rssi_result.num_chains_valid = event->num_chains_valid;
 
-	for (i = 0; i < CHAIN_MAX_NUM; i++)
-		WMA_LOGD(FL("chain_rssi: %d"), event->chain_rssi[i]);
 	qdf_mem_copy(chain_rssi_result.chain_rssi, event->chain_rssi,
 						sizeof(event->chain_rssi));
-	for (i = 0; i < event->num_chains_valid; i++)
+	for (i = 0; i < event->num_chains_valid; i++) {
+		WMA_LOGD(FL("chain_rssi: %d, ant_id: %d"),
+			 event->chain_rssi[i], event->ant_id[i]);
 		chain_rssi_result.chain_rssi[i] += WMA_TGT_NOISE_FLOOR_DBM;
+	}
 
-	for (i = 0; i < CHAIN_MAX_NUM; i++)
-		WMA_LOGD(FL("ant_id: %d"), event->ant_id[i]);
 	qdf_mem_copy(chain_rssi_result.ant_id, event->ant_id,
 						sizeof(event->ant_id));
 

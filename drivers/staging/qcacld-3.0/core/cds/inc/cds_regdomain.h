@@ -183,6 +183,7 @@ enum country_code {
 	CTRY_MONGOLIA = 496,
 	CTRY_MONTENEGRO = 499,
 	CTRY_MOROCCO = 504,
+	CTRY_MYANMAR = 104,
 	CTRY_NAMIBIA = 516,
 	CTRY_NEPAL = 524,
 	CTRY_NETHERLANDS = 528,
@@ -302,6 +303,7 @@ enum reg_domain {
 	ETSI10_WORLD = 0x24,
 	ETSI11_WORLD = 0x26,
 	ETSI13_WORLD = 0x28,
+	ETSI15_WORLD = 0x31,
 
 	APL4_WORLD = 0x42,
 	APL3_FCCA = 0x50,
@@ -405,6 +407,7 @@ enum reg_domain {
 	ETSI10 = 0x0D30,
 	ETSI11 = 0x0E30,
 	ETSI13 = 0x0E39,
+	ETSI15 = 0x0E41,
 
 	APL1 = 0x0150,
 	APL2 = 0x0250,
@@ -558,6 +561,8 @@ void cds_set_wma_dfs_region(uint8_t dfs_region);
 uint16_t cds_reg_dmn_get_opclass_from_channel(uint8_t *country,
 					      uint8_t channel,
 					      uint8_t offset);
+void cds_reg_dmn_get_channel_from_opclass(uint8_t *country,
+					  uint8_t op_class);
 uint16_t cds_reg_dmn_get_chanwidth_from_opclass(uint8_t *country,
 						uint8_t channel,
 						uint8_t opclass);

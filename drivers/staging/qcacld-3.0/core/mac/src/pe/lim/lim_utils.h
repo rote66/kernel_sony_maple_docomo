@@ -609,14 +609,14 @@ bool lim_check_disassoc_deauth_ack_pending(tpAniSirGlobal pMac,
 
 #ifdef WLAN_FEATURE_11W
 void lim_pmf_sa_query_timer_handler(void *pMacGlobal, uint32_t param);
-#endif
-
 void lim_set_protected_bit(tpAniSirGlobal pMac,
 		tpPESession psessionEntry,
 		tSirMacAddr peer, tpSirMacMgmtHdr pMacHdr);
-
-#ifdef WLAN_FEATURE_11W
 void lim_pmf_comeback_timer_callback(void *context);
+#else
+static inline void lim_set_protected_bit(tpAniSirGlobal pMac,
+	tpPESession psessionEntry,
+	tSirMacAddr peer, tpSirMacMgmtHdr pMacHdr) {}
 #endif /* WLAN_FEATURE_11W */
 
 void lim_set_ht_caps(tpAniSirGlobal p_mac,
@@ -764,6 +764,26 @@ bool lim_get_rx_ldpc(tpAniSirGlobal mac_ctx, enum channel_enum ch,
 void lim_decrement_pending_mgmt_count(tpAniSirGlobal mac_ctx);
 QDF_STATUS lim_util_get_type_subtype(void *pkt, uint8_t *type,
 					uint8_t *subtype);
+
+/**
+ * lim_send_dfs_chan_sw_ie_update() -updates the channel switch IE in beacon
+ * template
+ * @mac_ctx - pointer to global mac context
+ * @session - A pointer to pesession
+ *
+ * Return None
+ */
+void lim_send_dfs_chan_sw_ie_update(tpAniSirGlobal mac_ctx,
+				    tpPESession session);
+
+/**
+ * lim_process_ap_ecsa_timeout() -process ECSA timeout which decrement csa count
+ * in beacon and update beacon template in firmware
+ * @data - A pointer to pesession
+ *
+ * Return None
+ */
+void lim_process_ap_ecsa_timeout(void *session);
 
 /**
  * lim_send_chan_switch_action_frame()- function to send ECSA/CSA

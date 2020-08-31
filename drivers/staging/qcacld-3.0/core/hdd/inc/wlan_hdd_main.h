@@ -444,11 +444,8 @@ extern struct mutex hdd_init_deinit_lock;
 
 #define STATS_CONTEXT_MAGIC 0x53544154  /* STAT */
 #define PEER_INFO_CONTEXT_MAGIC 0x50494E46  /* PEER_INFO(PINF) */
-#define POWER_CONTEXT_MAGIC 0x504F5752  /* POWR */
 #define SNR_CONTEXT_MAGIC   0x534E5200  /* SNR */
-#define LINK_STATUS_MAGIC   0x4C4B5354  /* LINKSTATUS(LNST) */
 #define APF_CONTEXT_MAGIC 0x4575354    /* APF */
-#define POWER_STATS_MAGIC 0x14111990
 #define ACTION_FRAME_RANDOM_CONTEXT_MAGIC 0x87878787
 
 /* MAX OS Q block time value in msec
@@ -1083,6 +1080,7 @@ typedef struct {
 	uint64_t rx_bytes;
 	qdf_time_t last_tx_rx_ts;
 	qdf_time_t assoc_ts;
+	qdf_time_t disassoc_ts;
 	uint32_t tx_rate;
 	uint32_t rx_rate;
 	bool ampdu;
@@ -1447,8 +1445,8 @@ struct hdd_adapter_s {
 
 	struct completion roaming_comp_var;
 
-	/** Completion of change country code */
-	struct completion change_country_code;
+	/** Event of change country code */
+	qdf_event_t change_country_code;
 
 	/* completion variable for Linkup Event */
 	struct completion linkup_event_var;
@@ -1625,7 +1623,6 @@ struct hdd_adapter_s {
 	 * channel needs to be moved from the existing 2.4GHz channel.
 	 */
 	uint8_t pre_cac_chan;
-	struct power_stats_response *chip_power_stats;
 
 	/* rcpi information */
 	struct rcpi_info rcpi;
@@ -2253,10 +2250,6 @@ struct hdd_context_s {
 	uint32_t num_derived_addr;
 	unsigned long provisioned_intf_addr_mask;
 	unsigned long derived_intf_addr_mask;
-#ifdef WLAN_POWER_DEBUGFS
-	/* mutex lock to block concurrent access */
-	struct mutex power_stats_lock;
-#endif
 	struct hdd_cache_channels *original_channels;
 	qdf_mutex_t cache_channel_lock;
 
@@ -2467,20 +2460,23 @@ int hdd_bus_bandwidth_init(hdd_context_t *hdd_ctx);
  * Return: None.
  */
 void hdd_bus_bandwidth_destroy(hdd_context_t *hdd_ctx);
+
+#define GET_BW_COMPUTE_INTV(config) ((config)->busBandwidthComputeInterval)
+
 #else
-void hdd_bus_bw_compute_timer_start(hdd_context_t *hdd_ctx)
+static inline void hdd_bus_bw_compute_timer_start(hdd_context_t *hdd_ctx)
 {
 }
 
-void hdd_bus_bw_compute_timer_try_start(hdd_context_t *hdd_ctx)
+static inline void hdd_bus_bw_compute_timer_try_start(hdd_context_t *hdd_ctx)
 {
 }
 
-void hdd_bus_bw_compute_timer_stop(hdd_context_t *hdd_ctx)
+static inline void hdd_bus_bw_compute_timer_stop(hdd_context_t *hdd_ctx)
 {
 }
 
-void hdd_bus_bw_compute_timer_try_stop(hdd_context_t *hdd_ctx)
+static inline void hdd_bus_bw_compute_timer_try_stop(hdd_context_t *hdd_ctx)
 {
 }
 
@@ -2488,14 +2484,17 @@ static inline void hdd_stop_bus_bw_computer_timer(hdd_adapter_t *pAdapter)
 {
 }
 
-int hdd_bus_bandwidth_init(hdd_context_t *hdd_ctx)
+static inline int hdd_bus_bandwidth_init(hdd_context_t *hdd_ctx)
 {
 	return 0;
 }
 
-void hdd_bus_bandwidth_destroy(hdd_context_t *hdd_ctx)
+static inline void hdd_bus_bandwidth_destroy(hdd_context_t *hdd_ctx)
 {
 }
+
+#define GET_BW_COMPUTE_INTV(config) 0
+
 #endif
 
 int hdd_init(void);
@@ -2721,7 +2720,7 @@ static inline void hdd_set_tso_flags(hdd_context_t *hdd_ctx,
 	     * We want to enable TSO only if IP/UDP/TCP TX checksum flag is
 	     * enabled.
 	     */
-		hdd_info("TSO Enabled");
+		hdd_debug("TSO Enabled");
 		wlan_dev->features |=
 			 NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM |
 			 NETIF_F_TSO | NETIF_F_TSO6 | NETIF_F_SG;
@@ -2729,7 +2728,11 @@ static inline void hdd_set_tso_flags(hdd_context_t *hdd_ctx,
 }
 #else
 static inline void hdd_set_tso_flags(hdd_context_t *hdd_ctx,
-	 struct net_device *wlan_dev){}
+	 struct net_device *wlan_dev)
+{
+	hdd_debug("SG Enabled");
+	wlan_dev->features |= NETIF_F_SG;
+}
 #endif /* FEATURE_TSO */
 
 #if defined(FEATURE_WLAN_MCC_TO_SCC_SWITCH) || \
@@ -3184,5 +3187,7 @@ void hdd_update_hw_sw_info(hdd_context_t *hdd_ctx);
  * Return: None
  */
 void hdd_get_nud_stats_cb(void *data, struct rsp_stats *rsp, void *context);
+
+void hdd_sched_scan_results(struct wiphy *wiphy, uint64_t reqid);
 
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */
