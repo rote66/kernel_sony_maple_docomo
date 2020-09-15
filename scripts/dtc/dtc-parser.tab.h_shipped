@@ -40,6 +40,8 @@
 extern int yydebug;
 #endif
 
+extern YYLTYPE yylloc;
+
 /* Token type.  */
 #ifndef YYTOKENTYPE
 # define YYTOKENTYPE
