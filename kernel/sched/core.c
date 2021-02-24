@@ -304,13 +304,13 @@ int sysctl_sched_rt_runtime = 980000;
 cpumask_var_t cpu_isolated_map;
 
 struct rq *
-lock_rq_of(struct task_struct *p, unsigned long *flags)
+lock_rq_of(struct task_struct *p, struct rq_flags *flags)
 {
 	return task_rq_lock(p, flags);
 }
 
 void
-unlock_rq_of(struct rq *rq, struct task_struct *p, unsigned long *flags)
+unlock_rq_of(struct rq *rq, struct task_struct *p, struct rq_flags *flags)
 {
 	task_rq_unlock(rq, p, flags);
 }
@@ -8896,7 +8896,7 @@ static void cpu_cgroup_css_free(struct cgroup_subsys_state *css)
  */
 static void cpu_cgroup_fork(struct task_struct *task, void *private)
 {
-	unsigned long flags;
+	struct rq_flags flags;
 	struct rq *rq;
 
 	rq = task_rq_lock(task, &flags);
