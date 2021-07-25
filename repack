@@ -34,7 +34,7 @@ touch magisk_module/system/lib/modules/sony_carillon_nfc.ko
 touch magisk_module/system/lib/modules/test-iosched.ko
 touch magisk_module/system/lib/modules/tspp.ko
 touch magisk_module/system/lib/modules/ufs_test.ko
-#touch magisk_module/system/lib/modules/texfat.ko
+touch magisk_module/system/lib/modules/texfat.ko
 
 cd repack_zip
 zip -r SO-04J_EMP_Kernel_Beta.zip *
