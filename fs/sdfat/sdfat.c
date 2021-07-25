@@ -5205,7 +5205,11 @@ MODULE_ALIAS_FS("sdfat");
 #ifdef CONFIG_SDFAT_USE_FOR_EXFAT
 static struct file_system_type exfat_fs_type = {
 	.owner       = THIS_MODULE,
+#ifdef CONFIG_SDFAT_USE_FOR_FAKE_TEXFAT
+	.name        = "texfat",
+#else
 	.name        = "exfat",
+#endif
 	.mount       = sdfat_fs_mount,
 #ifdef CONFIG_SDFAT_DBG_IOCTL
 	.kill_sb    = sdfat_debug_kill_sb,
@@ -5214,7 +5218,11 @@ static struct file_system_type exfat_fs_type = {
 #endif /* CONFIG_SDFAT_DBG_IOCTL */
 	.fs_flags    = FS_REQUIRES_DEV,
 };
+#ifdef CONFIG_SDFAT_USE_FOR_FAKE_TEXFAT
+MODULE_ALIAS_FS("texfat");
+#else
 MODULE_ALIAS_FS("exfat");
+#endif
 #endif /* CONFIG_SDFAT_USE_FOR_EXFAT */
 
 #ifdef CONFIG_SDFAT_USE_FOR_VFAT
