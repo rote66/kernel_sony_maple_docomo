@@ -85,6 +85,8 @@ static void msm_atomic_wait_for_commit_done(
 		if (!crtc || !crtc->state || !crtc->state->enable)
 			continue;
 
+		if (drm_crtc_vblank_get(crtc))
+			continue;
 		/* If specified, only wait if requested flag is true */
 		private_flags = crtc->state->adjusted_mode.private_flags;
 		if (modeset_flags && !(modeset_flags & private_flags))
@@ -97,6 +99,8 @@ static void msm_atomic_wait_for_commit_done(
 
 		if (kms->funcs->wait_for_crtc_commit_done)
 			kms->funcs->wait_for_crtc_commit_done(kms, crtc);
+
+		drm_crtc_vblank_put(crtc);
 	}
 }
 
