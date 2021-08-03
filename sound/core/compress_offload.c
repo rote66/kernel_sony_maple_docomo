@@ -727,9 +727,11 @@ static int snd_compr_drain(struct snd_compr_stream *stream)
 	case SNDRV_PCM_STATE_PAUSED:
 		mutex_unlock(&stream->device->lock);
 		return -EPERM;
+		goto ret;
 	case SNDRV_PCM_STATE_XRUN:
 		mutex_unlock(&stream->device->lock);
 		return -EPIPE;
+		goto ret;
 	default:
 		break;
 	}

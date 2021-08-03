@@ -1446,7 +1446,7 @@ static int tmc_etr_bam_init(struct amba_device *adev,
 	return sps_register_bam_device(&bamdata->props, &bamdata->handle);
 }
 
-static void tmc_etr_bam_exit(struct tmc_drvdata *drvdata)
+static void __maybe_unused tmc_etr_bam_exit(struct tmc_drvdata *drvdata)
 {
 	struct tmc_etr_bam_data *bamdata = drvdata->bamdata;
 
