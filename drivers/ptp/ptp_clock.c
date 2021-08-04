@@ -171,9 +171,9 @@ static struct posix_clock_operations ptp_clock_ops = {
 	.read		= ptp_read,
 };
 
-static void ptp_clock_release(struct device *dev)
+static void delete_ptp_clock(struct posix_clock *pc)
 {
-	struct ptp_clock *ptp = container_of(dev, struct ptp_clock, dev);
+	struct ptp_clock *ptp = container_of(pc, struct ptp_clock, clock);
 
 	ptp_cleanup_pin_groups(ptp);
 	mutex_destroy(&ptp->tsevq_mux);
@@ -206,6 +206,7 @@ struct ptp_clock *ptp_clock_register(struct ptp_clock_info *info,
 	}
 
 	ptp->clock.ops = ptp_clock_ops;
+	ptp->clock.release = delete_ptp_clock;
 	ptp->info = info;
 	ptp->devid = MKDEV(major, index);
 	ptp->index = index;
@@ -217,6 +218,15 @@ struct ptp_clock *ptp_clock_register(struct ptp_clock_info *info,
 	err = ptp_populate_pin_groups(ptp);
 	if (err)
 		goto no_pin_groups;
+
+	/* Create a new device in our class. */
+	ptp->dev = device_create_with_groups(ptp_class, parent, ptp->devid,
+					     ptp, ptp->pin_attr_groups,
+					     "ptp%d", ptp->index);
+	if (IS_ERR(ptp->dev)) {
+		err = PTR_ERR(ptp->dev);
+		goto no_device;
+	}
 
 	/* Register a new PPS source. */
 	if (info->pps) {
@@ -233,18 +243,8 @@ struct ptp_clock *ptp_clock_register(struct ptp_clock_info *info,
 		}
 	}
 
-	/* Initialize a new device of our class in our clock structure. */
-	device_initialize(&ptp->dev);
-	ptp->dev.devt = ptp->devid;
-	ptp->dev.class = ptp_class;
-	ptp->dev.parent = parent;
-	ptp->dev.groups = ptp->pin_attr_groups;
-	ptp->dev.release = ptp_clock_release;
-	dev_set_drvdata(&ptp->dev, ptp);
-	dev_set_name(&ptp->dev, "ptp%d", ptp->index);
-
-	/* Create a posix clock and link it to the device. */
-	err = posix_clock_register(&ptp->clock, &ptp->dev);
+	/* Create a posix clock. */
+	err = posix_clock_register(&ptp->clock, ptp->devid);
 	if (err) {
 		pr_err("failed to create posix clock\n");
 		goto no_clock;
@@ -256,6 +256,8 @@ no_clock:
 	if (ptp->pps_source)
 		pps_unregister_source(ptp->pps_source);
 no_pps:
+	device_destroy(ptp_class, ptp->devid);
+no_device:
 	ptp_cleanup_pin_groups(ptp);
 no_pin_groups:
 	mutex_destroy(&ptp->tsevq_mux);
@@ -275,6 +277,8 @@ int ptp_clock_unregister(struct ptp_clock *ptp)
 	/* Release the clock's resources. */
 	if (ptp->pps_source)
 		pps_unregister_source(ptp->pps_source);
+
+	device_destroy(ptp_class, ptp->devid);
 
 	posix_clock_unregister(&ptp->clock);
 
