@@ -1892,13 +1892,12 @@ retry_private:
 			if (!ret)
 				goto retry;
 			goto out;
-		case -EBUSY:
 		case -EAGAIN:
 			/*
 			 * Two reasons for this:
-			 * - EBUSY: Owner is exiting and we just wait for the
+			 * - Owner is exiting and we just wait for the
 			 *   exit to complete.
-			 * - EAGAIN: The user space value changed.
+			 * - The user space value changed.
 			 */
 			free_pi_state(pi_state);
 			pi_state = NULL;
@@ -2564,13 +2563,12 @@ retry_private:
 			goto out_unlock_put_key;
 		case -EFAULT:
 			goto uaddr_faulted;
-		case -EBUSY:
 		case -EAGAIN:
 			/*
 			 * Two reasons for this:
-			 * - EBUSY: Task is exiting and we just wait for the
+			 * - Task is exiting and we just wait for the
 			 *   exit to complete.
-			 * - EAGAIN: The user space value changed.
+			 * - The user space value changed.
 			 */
 			queue_unlock(hb);
 			put_futex_key(&q.key);
