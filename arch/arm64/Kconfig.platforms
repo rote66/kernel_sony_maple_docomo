@@ -105,6 +105,15 @@ config MACH_SONY_MAPLE_DCM
 	If you enable this config,
 	please use SONY Mobile device tree.
 
+config MACH_SONY_MAPLE_DCM_FORCE_4K
+	bool "Sony Mobile Maple Docomo With force 4k lcd"
+	depends on MACH_SONY_MAPLE_DCM
+	help
+	Support for the SONY Mobile Maple Docomo device
+	which is based on SONY Yoshino platform.
+	If you enable this config,
+	please use SONY Mobile device tree.
+
 config MACH_SONY_MAPLE_DSDS
 	bool "Sony Mobile Maple Dsds"
 	depends on ARCH_SONY_YOSHINO

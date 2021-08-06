@@ -18,7 +18,12 @@
  */
 
 #include "msm8998-yoshino-common.dtsi"
+#ifdef CONFIG_MACH_SONY_MAPLE_DCM_FORCE_4K
 #include "dsi-panel-maple.dtsi"
+#else
+#include "dsi-panel-maple-4k.dtsi"
+#endif
+
 
 &firmware {
 	android {
