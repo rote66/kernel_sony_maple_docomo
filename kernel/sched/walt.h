@@ -35,6 +35,7 @@ void walt_account_irqtime(int cpu, struct task_struct *curr, u64 delta,
                                   u64 wallclock);
 
 u64 walt_irqload(int cpu);
+int sync_cgroup_colocation(struct task_struct *p, bool insert);
 int walt_cpu_high_irqload(int cpu);
 
 #else /* CONFIG_SCHED_WALT */
