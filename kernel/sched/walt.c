@@ -57,11 +57,6 @@ static unsigned int sync_cpu;
 static ktime_t ktime_last;
 static bool walt_ktime_suspended;
 
-static unsigned int task_load(struct task_struct *p)
-{
-	return p->ravg.demand;
-}
-
 static inline void fixup_cum_window_demand(struct rq *rq, s64 delta)
 {
 	rq->cum_window_demand += delta;
@@ -897,4 +892,9 @@ void walt_init_new_task_load(struct task_struct *p)
 	p->ravg.demand = init_load_windows;
 	for (i = 0; i < RAVG_HIST_SIZE_MAX; ++i)
 		p->ravg.sum_history[i] = init_load_windows;
+}
+
+int __weak sync_cgroup_colocation(struct task_struct *p, bool insert)
+{
+	return 0;
 }

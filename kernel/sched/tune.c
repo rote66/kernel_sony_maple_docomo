@@ -10,6 +10,7 @@
 
 #include "sched.h"
 #include "tune.h"
+#include "walt.h"
 
 #ifdef CONFIG_CGROUP_SCHEDTUNE
 bool schedtune_initialized = false;
@@ -144,16 +145,15 @@ struct schedtune {
 	 */
 	bool sched_boost_enabled_backup;
 
+	/* Controls whether further updates are allowed to the colocate flag */
+	bool colocate_update_disabled;
+#endif
 	/*
 	 * Controls whether tasks of this cgroup should be colocated with each
 	 * other and tasks of other cgroups that have the same flag turned on.
 	 */
 	bool colocate;
-
-	/* Controls whether further updates are allowed to the colocate flag */
-	bool colocate_update_disabled;
-#endif
-
+	
 	/* Performance Boost (B) region threshold params */
 	int perf_boost_idx;
 
