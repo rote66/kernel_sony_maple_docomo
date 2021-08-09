@@ -1382,7 +1382,7 @@ struct sched_statistics {
 };
 #endif
 
-#ifdef CONFIG_SCHED_walt
+#ifdef CONFIG_SCHED_WALT
 #define RAVG_HIST_SIZE_MAX  5
 #define NUM_BUSY_BUCKETS 10
 

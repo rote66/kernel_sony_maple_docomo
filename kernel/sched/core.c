@@ -80,6 +80,8 @@
 #include <linux/binfmts.h>
 #include <linux/context_tracking.h>
 #include <linux/compiler.h>
+#include <linux/irq.h>
+#include <linux/sched/core_ctl.h>
 #include <linux/cpufreq_times.h>
 
 #include <asm/switch_to.h>
@@ -96,6 +98,7 @@
 #include "sched.h"
 #include "../workqueue_internal.h"
 #include "../smpboot.h"
+#include "../time/tick-internal.h"
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
@@ -2072,6 +2075,8 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags,
 	 */
 	smp_rmb();
 
+	rq = cpu_rq(task_cpu(p));
+
 	raw_spin_lock(&rq->lock);
 	wallclock = walt_ktime_clock();
 	walt_update_task_ravg(rq->curr, rq, TASK_UPDATE, wallclock, 0);
@@ -3063,6 +3068,8 @@ void scheduler_tick(void)
 	trigger_load_balance(rq);
 #endif
 	rq_last_tick_reset(rq);
+	if (curr->sched_class == &fair_sched_class)
+		check_for_migration(rq, curr);
 }
 
 #ifdef CONFIG_NO_HZ_FULL
@@ -7998,6 +8005,7 @@ void __init sched_init(void)
 		rq->active_balance = 0;
 		rq->next_balance = jiffies;
 		rq->push_cpu = 0;
+		rq->push_task = NULL;
 		rq->cpu = i;
 		rq->online = 0;
 		rq->idle_stamp = 0;
