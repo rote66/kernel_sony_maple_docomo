@@ -8,7 +8,6 @@ umask 022
 
 # Global vars
 TMPDIR=/dev/tmp
-INSTALLER=$TMPDIR
 PERSISTDIR=/sbin/.magisk/mirror/persist
 
 rm -rf $TMPDIR 2>/dev/null
@@ -16,11 +15,6 @@ mkdir -p $TMPDIR
 
 # echo before loading util_functions
 ui_print() { echo "$1"; }
-
-on_install_bb() {
-  ui_print "- Extracting module files"
-  unzip -o "$ZIPFILE" 'system/*' -d $MODPATH >&2
-}
 
 require_new_magisk() {
   ui_print "*******************************"
@@ -96,36 +90,32 @@ mkdir -p $MODPATH
 ##########
 
 if is_legacy_script; then
-  unzip -o "$ZIPFILE" module.prop install.sh uninstall.sh 'common/*' -d $TMPDIR >&2
+  unzip -oj "$ZIPFILE" module.prop install.sh uninstall.sh 'common/*' -d $TMPDIR >&2
 
   # Load install script
   . $TMPDIR/install.sh
 
   # Callbacks
   print_modname
-  type on_install &>/dev/null && on_install || on_install_bb
-  
+  on_install
+
   # Custom uninstaller
   [ -f $TMPDIR/uninstall.sh ] && cp -af $TMPDIR/uninstall.sh $MODPATH/uninstall.sh
 
   # Skip mount
-  if [[ -n `grep 'AUTOMOUNT=' $TMPDIR/install.sh` ]]; then
-	[[ $AUTOMOUNT == false ]] && touch $MODPATH/skip_mount
-  else
-	[[ $SKIPMOUNT == true ]] && touch $MODPATH/skip_mount
-  fi
+  $SKIPMOUNT && touch $MODPATH/skip_mount
 
   # prop file
-  $PROPFILE && cp -af $TMPDIR/system.prop $MODPATH/common/system.prop
+  $PROPFILE && cp -af $TMPDIR/system.prop $MODPATH/system.prop
 
   # Module info
   cp -af $TMPDIR/module.prop $MODPATH/module.prop
 
   # post-fs-data scripts
-  $POSTFSDATA && cp -af $TMPDIR/common/post-fs-data.sh $MODPATH/post-fs-data.sh
+  $POSTFSDATA && cp -af $TMPDIR/post-fs-data.sh $MODPATH/post-fs-data.sh
 
   # service scripts
-  $LATESTARTSERVICE && cp -af $TMPDIR/common/service.sh $MODPATH/service.sh
+  $LATESTARTSERVICE && cp -af $TMPDIR/service.sh $MODPATH/service.sh
 
   ui_print "- Setting permissions"
   set_permissions
