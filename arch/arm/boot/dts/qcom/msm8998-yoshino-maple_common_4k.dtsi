@@ -18,7 +18,7 @@
  */
 
 #include "msm8998-yoshino-common.dtsi"
-#include "dsi-panel-maple.dtsi"
+#include "dsi-panel-maple-4k.dtsi"
 
 &firmware {
 	android {
