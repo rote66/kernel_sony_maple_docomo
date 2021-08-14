@@ -5017,7 +5017,7 @@ static int __ref set_enabled(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 
-/*	if (*val == '0' || *val == 'n' || *val == 'N') {
+	if (*val == '0' || *val == 'n' || *val == 'N') {
 		enabled = 0;
 		interrupt_mode_init();
 	pr_info("%s: msm_thermal disabled!\n", KBUILD_MODNAME);
