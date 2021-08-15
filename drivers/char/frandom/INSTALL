@@ -1,0 +1,92 @@
+K E R N E L   M O D U L E   I N S T A L L A T I O N
+===================================================
+
+There is nothing special about these instructions. They are intended as a
+step-by-step guide for whoever isn't used to install kernel modules.
+
+It may *look* complicated, but the whole thing should take no more than 10
+minutes.
+
+By default, the module is compiled for the kernel currently running.
+
+The installations consists of the following steps:
+
+1. Compilation
+2. Move frandom.ko to /lib/modules/{something}
+3. Copy udev file
+4. Make frandom load at bootup
+5. Test
+
+In detail:
+=========
+
+If you want to compile for another kernel than the currently running, edit
+the Makefile, so that LINUXSRCDIR is the directory of the source
+of the kernel that you want to compile for (for example,
+LINUXSRCDIR := /usr/src/linux-2.6.18-mysrc)
+
+1. Compile
+==========
+
+Simply type "make" at shell prompt.
+
+2. Copy module binary to some /lib/modules/
+===========================================
+
+install -m 644 frandom.ko /lib/modules/`uname -r`/kernel/drivers/char/
+depmod -a
+
+This is good if the module was compiled for the currently running kernel.
+Otherwise, go for /lib/modules/x.x.xx-xxx/kernel/drivers/char/ instead.
+
+If you get an error message on the "depmod -a", on which frandom.ko is
+*directly mentioned*, you probably compiled the module for the wrong kernel, or
+installed it in the wrong module tree. Other errors have nothing to do with
+frandom.
+
+At this stage, "modprobe frandom" (as root) should work. If the module is found,
+but fails on a "Device or resource busy" error, it may be because the
+character-MAJOR 235 is occupied by some other device. In any case of failure,
+check /var/log/messages for a reason for it.
+
+See the README file about changing the MAJOR.
+
+3. Copy udev file
+=================
+
+Whenever the frandom module goes into the kernel, udev automatically
+generates the /dev/frandom and /dev/erandom files. Unfortunately, the
+default is making these files accessible only for root. In order to
+set the correct permission (444), this line must appear somewhere in
+the udev rules:
+
+KERNEL=="[ef]random", NAME="%k", MODE="444", OPTIONS="last_rule"
+
+The simplest way to achieve this is to copy 10-frandom.rules into
+/etc/udev/rules.d/ or where your system's udev looks for these rules.
+You should expect to find several files in the target directory.
+
+If you insmod'ed frandom prior to this change, you should rmmod it and
+insmod it again, so that the /dev files are set up correctly.
+
+4. Make frandom load at bootup
+==============================
+
+This can be done by adding the following line (or alike) to /etc/rc.local
+(or whatever your distro uses during startup):
+
+/sbin/modprobe frandom
+
+This is a matter of your taste in system administration.
+
+5. Test
+=======
+
+The test.sh bash script runs a simple speed test. It can be executed as regular
+user. It generates a file, frandom-res.txt. Note that it tests urandom vs.
+frandom, with 10 times as much data for frandom.
+
+Good luck & skill,
+
+  Eli Billauer, 1 Oct 2003 (updated Jul 2011)
+  Email: eli _at_ billauer.co.il

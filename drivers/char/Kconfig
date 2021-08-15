@@ -616,6 +616,7 @@ config TILE_SROM
 	  how to partition a single ROM for multiple purposes.
 
 source "drivers/char/xillybus/Kconfig"
+source "drivers/char/frandom/Kconfig"
 
 config MSM_ADSPRPC
 	tristate "QTI ADSP RPC driver"
