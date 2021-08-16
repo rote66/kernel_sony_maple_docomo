@@ -299,7 +299,7 @@ static void msm_pcm_routng_cfg_matrix_map_pp(struct route_payload payload,
 	if ((path_type != ADM_PATH_PLAYBACK) ||
 	    (perf_mode == ULTRA_LOW_LATENCY_PCM_MODE) ||
 		!is_custom_stereo_on)
-		return;
+	return;
 
 		for (itr = 0; itr < payload.num_copps; itr++) {
 			if ((payload.port_id[itr] != SLIMBUS_0_RX) &&
