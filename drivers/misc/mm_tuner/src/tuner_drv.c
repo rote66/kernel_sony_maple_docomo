@@ -455,8 +455,8 @@ static int tuner_probe(struct platform_device *pdev)
 			&tuner_sysfs_attrs[i]);
 		if (ret) {
 			for (; i >= 0; --i)
-				device_remove_file(&drvdata->sysfs_dev,
-					&tuner_sysfs_attrs[i]);
+			device_remove_file(&drvdata->sysfs_dev,
+				&tuner_sysfs_attrs[i]);
 				retval = -EINVAL;
 				goto out;
 		}

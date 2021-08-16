@@ -237,7 +237,7 @@ static int32_t msm_vfe40_init_qos_parms(struct vfe_device *vfe_dev,
 					kfree(ds_regs);
 	} else {
 					for (i = 0; i < ds_entries; i++)
-						msm_camera_io_w(ds_settings[i],
+					msm_camera_io_w(ds_settings[i],
 							vfebase + ds_regs[i]);
 						kfree(ds_regs);
 						kfree(ds_settings);
