@@ -303,8 +303,13 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = ccache gcc
 HOSTCXX      = ccache g++
-HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
-HOSTCXXFLAGS = -O2
+#HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
+#HOSTCXXFLAGS = -O2
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 \
+				-fomit-frame-pointer -fgraphite -fgraphite-identity \
+				-floop-nest-optimize -floop-flatten
+HOSTCXXFLAGS = -O3 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -ffast-math \
+					-floop-nest-optimize -fgraphite -fgraphite-identity -floop-flatten -floop-parallelize-all
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -647,9 +652,13 @@ ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os
 else
 ifdef CONFIG_PROFILE_ALL_BRANCHES
-KBUILD_CFLAGS	+= -O2
+#KBUILD_CFLAGS	+= -O2
+KBUILD_CFLAGS	+= -O3 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -ffast-math \
+					-floop-nest-optimize -fgraphite -fgraphite-identity -floop-flatten -floop-parallelize-all
 else
-KBUILD_CFLAGS   += -O2
+#KBUILD_CFLAGS   += -O2
+KBUILD_CFLAGS	+= -O3 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -ffast-math \
+					-floop-nest-optimize -fgraphite -fgraphite-identity -floop-flatten -floop-parallelize-all
 endif
 endif
 
