@@ -53,7 +53,8 @@
 			qcom,limits-info = <&mitigation_profile0>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			enable-method = "psci";
-			efficiency = <1024>;
+			efficiency = <636>;
+			capacity-dmips-mhz = <636>;
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
 			next-level-cache = <&L2_0>;
 			qcom,ea = <&ea0>;
@@ -154,7 +155,8 @@
 			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			enable-method = "psci";
-			efficiency = <1536>;
+			efficiency = <1024>;
+			capacity-dmips-mhz = <1024>;
 			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
 			next-level-cache = <&L2_1>;
 			qcom,ea = <&ea4>;
@@ -285,11 +287,31 @@
 			};
 		};
 		energy-costs {
+			compatible = "sched-energy";
 			CPU_COST_0: core-cost0 {
 				busy-cost-data = <
-					386 484
-					476 575
-					497 619
+					78   25
+                    94   12
+                    114   17
+                    134   12
+                    154   15
+                    174   16
+                    193   14
+                    214   22
+                    228   24
+                    248   21
+                    268   44
+                    283   31
+                    303   52
+                 	323   41
+                    343   66
+                    363   56
+                    382   84
+                    402   71
+                    432  115
+                    452   93
+                    472  107
+                    490  158
 				>;
 				idle-cost-data = <
 					4 4 0 0
@@ -297,13 +319,37 @@
 			};
 			CPU_COST_1: core-cost1 {
 				busy-cost-data = <
-					645  669
-					782  799
-					848  1013
-					916  1103
-					982  1374
-					1007 1476
-					1024 1683
+					125   43
+                    144   38
+                    176   51
+                    208   50
+                    240   67
+                    272   79
+                    304   80
+                    336   98
+                    376  101
+                    408  111
+                    440  146
+                    472  127
+                    496  142
+                    528  194
+                    560  180
+                    592  200
+                    624  240
+                    656  256
+                    688  267
+                    720  317
+                    752  388
+                    784  384
+                    816  444
+                    848  479
+                    880  516
+                    944  693
+                    976  657
+                    1008  732
+                    1016  798
+                    1024  829
+                    1024  807
 				>;
 				idle-cost-data = <
 					10 10 0 0
@@ -311,9 +357,9 @@
 			};
 			CLUSTER_COST_0: cluster-cost0 {
 				busy-cost-data = <
-					386 42
-					476 59
-					497 66
+					78 42
+					94 59
+					114 66
 				>;
 				idle-cost-data = <
 					31 31 31 0
@@ -321,13 +367,13 @@
 			};
 			CLUSTER_COST_1: cluster-cost1 {
 				busy-cost-data = <
-					645  63
-					782  87
-					848  104
-					916  130
-					982  178
-					1007 185
-					1024 203
+					125  63
+					144  87
+					176  104
+					208  130
+					240  178
+					272 185
+					304 203
 				>;
 				idle-cost-data = <
 					50 50 50 0
