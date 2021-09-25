@@ -6222,8 +6222,8 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 	if (capacity == max_capacity)
 		return true;
 
-	if (capacity * capacity_margin > max_capacity * 1024)
-		return true;
+	if (schedtune_task_boost(p) > 0)
+		return false;
 
 	return task_fits_capacity(p, capacity, cpu);
 }
