@@ -6207,13 +6207,11 @@ static inline unsigned long task_util(struct task_struct *p)
 
 static inline unsigned long boosted_task_util(struct task_struct *task);
 
-static inline bool __task_fits(struct task_struct *p, int cpu, int util)
+static inline bool task_fits_capacity(struct task_struct *p,
+					long capacity,
+					int cpu)
 {
-	unsigned long capacity = capacity_of(cpu);
-
-	util += boosted_task_util(p);
-
-	return (capacity * 1024) > (util * capacity_margin);
+	return (capacity * 1024) > (boosted_task_util(p) * capacity_margin);
 }
 
 static inline bool task_fits_max(struct task_struct *p, int cpu)
@@ -6227,7 +6225,7 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 	if (capacity * capacity_margin > max_capacity * 1024)
 		return true;
 
-	return __task_fits(p, cpu, 0);
+	return task_fits_capacity(p, capacity, cpu);
 }
 
 static bool __cpu_overutilized(int cpu, int delta)
