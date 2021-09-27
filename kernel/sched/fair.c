@@ -5925,8 +5925,6 @@ static inline bool cpu_in_sg(struct sched_group *sg, int cpu)
 	return cpu != -1 && cpumask_test_cpu(cpu, sched_group_cpus(sg));
 }
 
-static inline unsigned long task_util(struct task_struct *p);
-
 /*
  * energy_diff(): Estimate the energy impact of changing the utilization
  * distribution. eenv specifies the change: utilisation amount, source, and
@@ -6192,17 +6190,6 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 	schedstat_inc(p, se.statistics.nr_wakeups_affine);
 
 	return 1;
-}
-
-static inline unsigned long task_util(struct task_struct *p)
-{
-#ifdef CONFIG_SCHED_WALT
-       if (!walt_disabled && sysctl_sched_use_walt_task_util) {
-               unsigned long demand = p->ravg.demand;
-               return (demand << 10) / walt_ravg_window;
-       }
-#endif
-	return p->se.avg.util_avg;
 }
 
 static inline unsigned long boosted_task_util(struct task_struct *task);
