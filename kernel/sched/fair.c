@@ -6674,6 +6674,10 @@ static int cpu_util_wake(int cpu, struct task_struct *p)
 	if (cpu != task_cpu(p) || !READ_ONCE(p->se.avg.last_update_time))
 		return cpu_util(cpu);
 
+#ifdef CONFIG_SCHED_WALT
+	util = max_t(long, cpu_util(cpu) - task_util(p), 0);
+#else
+
 	cfs_rq = &cpu_rq(cpu)->cfs;
 	util = READ_ONCE(cfs_rq->avg.util_avg);
 
@@ -6708,6 +6712,7 @@ static int cpu_util_wake(int cpu, struct task_struct *p)
 	 */
 	if (sched_feat(UTIL_EST))
 		util = max_t(unsigned long, util, READ_ONCE(cfs_rq->avg.util_est.enqueued));
+#endif
 
 	/*
 	 * Utilization (estimated) can exceed the CPU capacity, thus let's
