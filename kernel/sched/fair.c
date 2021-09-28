@@ -5750,7 +5750,7 @@ static int group_idle_state(struct energy_env *eenv, struct sched_group *sg)
 	 * achievable when we move the task.
 	 */
 	for_each_cpu(i, sched_group_cpus(sg))
-		grp_util += cpu_util_without(i, eenv->task);
+		grp_util += cpu_util(i);
 
 	/*
 	 * add or remove util as appropriate to indicate what group util
@@ -7182,7 +7182,7 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu, int sync
 #ifdef CONFIG_SCHED_WALT
 		if (!walt_disabled && sysctl_sched_use_walt_cpu_util &&
 			p->state == TASK_WAKING)
-			delta = task_util_est(p);
+			delta = task_util(p);
 #endif
 		/* Not enough spare capacity on previous cpu */
 		if (__cpu_overutilized(prev_cpu, delta)) {
