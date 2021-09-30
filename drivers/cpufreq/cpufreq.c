@@ -372,7 +372,7 @@ static void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
  *********************************************************************/
 
 static DEFINE_PER_CPU(unsigned long, freq_scale) = SCHED_CAPACITY_SCALE;
-static DEFINE_PER_CPU(unsigned long, max_freq_cpu);
+static DEFINE_PER_CPU(unsigned long, max_cpu_freq);
 static DEFINE_PER_CPU(unsigned long, max_freq_scale) = SCHED_CAPACITY_SCALE;
 
 static void
@@ -384,7 +384,7 @@ scale_freq_capacity(const cpumask_t *cpus, unsigned long cur_freq,
 
 	for_each_cpu(cpu, cpus) {
 		per_cpu(freq_scale, cpu) = scale;
-		per_cpu(max_freq_cpu, cpu) = max_freq;
+		per_cpu(max_cpu_freq, cpu) = max_freq;
 	}
 
 	pr_debug("cpus %*pbl cur freq/max freq %lu/%lu kHz freq scale %lu\n",
@@ -405,7 +405,7 @@ scale_max_freq_capacity(const cpumask_t *cpus, unsigned long policy_max_freq)
 	if (cpu >= nr_cpu_ids)
 		return;
 
-	max_freq = per_cpu(max_freq_cpu, cpu);
+	max_freq = per_cpu(max_cpu_freq, cpu);
 
 	if (!max_freq)
 		return;
@@ -2550,10 +2550,10 @@ EXPORT_SYMBOL_GPL(cpufreq_boost_enabled);
  *               FREQUENCY INVARIANT ACCOUNTING SUPPORT              *
  *********************************************************************/
 
-__weak void arch_set_freq_scale(struct cpumask *cpus,
-				unsigned long cur_freq,
-				unsigned long max_freq)
+void arch_set_freq_scale(struct cpumask *cpus, unsigned long cur_freq,
+			 unsigned long max_freq)
 {
+	scale_freq_capacity(cpus, cur_freq, max_freq);
 }
 EXPORT_SYMBOL_GPL(arch_set_freq_scale);
 
