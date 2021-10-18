@@ -91,7 +91,7 @@ struct bbr {
     struct minmax bw;   /* Max recent delivery rate in pkts/uS << 24 */
     u32 rtt_cnt;        /* count of packet-timed rounds elapsed */
     u32     next_rtt_delivered; /* scb->tx.delivered at end of round */
-    struct skb_mstamp cycle_mstamp;        /* time of this cycle phase start */
+    u64 cycle_mstamp;        /* time of this cycle phase start */
     u32     mode:3,          /* current bbr_mode in state machine */
         prev_ca_state:3,     /* CA state on previous ACK */
         packet_conservation:1,  /* use packet conservation? */
@@ -118,7 +118,7 @@ struct bbr {
     u32 prior_cwnd; /* prior cwnd upon entering loss recovery */
     u32 full_bw;    /* recent bw, to estimate if pipe is full */
     /* For tracking ACK aggregation: */
-    struct skb_mstamp ack_epoch_mstamp;
+    u64 ack_epoch_mstamp;   
     /* start of ACK sampling epoch */
     u16 extra_acked[2];     
     /* max excess data ACKed in epoch */
@@ -243,7 +243,7 @@ static void bbr_drain_to_target_cycling(struct sock *sk,
     struct tcp_sock *tp = tcp_sk(sk);
     struct bbr *bbr = inet_csk_ca(sk);
     u32 elapsed_us =
-                skb_mstamp_us_delta(&tp->delivered_mstamp, &bbr->cycle_mstamp);
+                tcp_stamp_us_delta(tp->delivered_mstamp, bbr->cycle_mstamp);
     u32 inflight, bw;
     if (bbr->mode != BBR_PROBE_BW)
         return;
@@ -597,7 +597,7 @@ static bool bbr_is_next_cycle_phase(struct sock *sk,
     struct tcp_sock *tp = tcp_sk(sk);
     struct bbr *bbr = inet_csk_ca(sk);
     bool is_full_length =
-        skb_mstamp_us_delta(&tp->delivered_mstamp, &bbr->cycle_mstamp) >
+        tcp_stamp_us_delta(tp->delivered_mstamp, bbr->cycle_mstamp) >
         bbr->min_rtt_us;
     u32 inflight, bw;
 
@@ -689,7 +689,7 @@ static void bbr_reset_lt_bw_sampling_interval(struct sock *sk)
     struct tcp_sock *tp = tcp_sk(sk);
     struct bbr *bbr = inet_csk_ca(sk);
 
-    bbr->lt_last_stamp = tp->delivered_mstamp.stamp_jiffies;
+    bbr->lt_last_stamp = div_u64(tp->delivered_mstamp, USEC_PER_MSEC);
     bbr->lt_last_delivered = tp->delivered;
     bbr->lt_last_lost = tp->lost;
     bbr->lt_rtt_cnt = 0;
@@ -795,15 +795,15 @@ static void bbr_lt_bw_sampling(struct sock *sk, const struct rate_sample *rs)
         return;
 
     /* Find average delivery rate in this sampling interval. */
-    t = (s32)(tp->delivered_mstamp.stamp_jiffies - bbr->lt_last_stamp);
-    if (t < 1)
-        return;     /* interval is less than one jiffy, so wait */
-    t = jiffies_to_usecs(t);
+    t = div_u64(tp->delivered_mstamp, USEC_PER_MSEC) - bbr->lt_last_stamp;
+    if ((s32)t < 1)
+        return;     /* interval is less than one ms, so wait */
     /* Check if can multiply without overflow */
-    if (t < 1) {
+    if (t >= ~0U / USEC_PER_MSEC) {
         bbr_reset_lt_bw_sampling(sk);  /* interval too long; reset */
         return;
     }
+    t *= USEC_PER_MSEC;
     bw = (u64)delivered * BW_UNIT;
     do_div(bw, t);
     bbr_lt_bw_interval_done(sk, bw);
@@ -928,8 +928,8 @@ static void bbr_check_drain(struct sock *sk, const struct rate_sample *rs)
         }   
     }
     /* Compute how many packets we expected to be delivered over epoch. */
-    epoch_us = skb_mstamp_us_delta(&tp->delivered_mstamp,
-		                    &bbr->ack_epoch_mstamp);
+    epoch_us = tcp_stamp_us_delta(tp->delivered_mstamp,
+                                    bbr->ack_epoch_mstamp);
     expected_acked = ((u64)bbr_bw(sk) * epoch_us) / BW_UNIT;
     /* Reset the aggregation epoch if ACK rate is below expected rate or
      * significantly large no. of ack received since epoch (potentially
@@ -1070,7 +1070,7 @@ static void bbr_init(struct sock *sk)
     bbr->idle_restart = 0;
     bbr->full_bw = 0;
     bbr->full_bw_cnt = 0;
-    bbr->cycle_mstamp.v64 = 0;
+    bbr->cycle_mstamp = 0;
     bbr->cycle_idx = 0;
     bbr->cycle_len = 0;
     bbr_reset_lt_bw_sampling(sk);
