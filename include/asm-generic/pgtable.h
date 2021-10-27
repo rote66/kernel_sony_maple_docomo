@@ -606,7 +606,7 @@ extern void untrack_pfn(struct vm_area_struct *vma, unsigned long pfn,
 #ifdef CONFIG_UKSM
 static inline int is_uksm_zero_pfn(unsigned long pfn)
 {
-	extern unsigned long uksm_zero_pfn;
+	extern unsigned long uksm_zero_pfn __read_mostly;
         return pfn == uksm_zero_pfn;
 }
 #else
@@ -619,7 +619,11 @@ static inline int is_uksm_zero_pfn(unsigned long pfn)
 #ifdef __HAVE_COLOR_ZERO_PAGE
 static inline int is_zero_pfn(unsigned long pfn)
 {
-	extern unsigned long zero_pfn;
+#ifdef CONFIG_UKSM
+	extern unsigned long zero_pfn __readonly;
+#else
+  	extern unsigned long zero_pfn;
+#endif
 	unsigned long offset_from_zero_pfn = pfn - zero_pfn;
 	return offset_from_zero_pfn <= (zero_page_mask >> PAGE_SHIFT) || is_uksm_zero_pfn(pfn);
 }
@@ -629,7 +633,11 @@ static inline int is_zero_pfn(unsigned long pfn)
 #else
 static inline int is_zero_pfn(unsigned long pfn)
 {
+#ifdef CONFIG_UKSM
+	extern unsigned long zero_pfn __read_mostly;
+#else
 	extern unsigned long zero_pfn;
+#endif
 	return (pfn == zero_pfn) || (is_uksm_zero_pfn(pfn));
 }
 
