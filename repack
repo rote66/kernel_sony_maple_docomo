@@ -17,7 +17,7 @@ cd out
 find -name "*.ko" -exec mv {} ../magisk_module/system/lib/modules \;
 cd ..
 repack_zip/emp/strip --strip-unneeded magisk_module/system/lib/modules/*
-#mv magisk_module/system/lib/modules/wlan.ko magisk_module/system/lib/modules/qca_cld3_wlan.ko
+mv magisk_module/system/lib/modules/wlan.ko magisk_module/system/lib/modules/qca_cld3_wlan.ko
 #touch magisk_module/system/lib/modules/texfat.ko
 
 cd repack_zip
