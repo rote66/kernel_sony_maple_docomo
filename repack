@@ -1,0 +1,36 @@
+#!/bin/sh
+
+VER=$1
+SUB=$2
+
+rm -f repack_zip/emp/zImage
+rm -f magisk_module/system/lib/modules/*.ko
+
+if [ ! -d magisk_module/system ]; then
+	mkdir magisk_module/system
+	mkdir magisk_module/system/lib
+	mkdir magisk_module/system/lib/modules
+fi
+
+cp out/arch/arm64/boot/Image.gz-dtb repack_zip/emp/zImage
+cd out
+find -name "*.ko" -exec mv {} ../magisk_module/system/lib/modules \;
+cd ..
+repack_zip/emp/strip --strip-unneeded magisk_module/system/lib/modules/*
+#mv magisk_module/system/lib/modules/wlan.ko magisk_module/system/lib/modules/qca_cld3_wlan.ko
+#touch magisk_module/system/lib/modules/texfat.ko
+
+cd repack_zip
+zip -r SO-04J_EMP_Kernel_Beta.zip *
+mv SO-04J_EMP_Kernel_Beta.zip ../
+cd ../magisk_module
+zip -r SO-04J_EMP_Kernel_modules_magisk.zip *
+mv SO-04J_EMP_Kernel_modules_magisk.zip ../
+cd ..
+echo "--------------------------------------------------"
+echo "-              Repack      Completed             -"
+echo "--------------------------------------------------"
+echo "-              kernel  by rote66                 -"
+echo "--------------------------------------------------"
+echo "-Cutting Edge Aftermarket Sony Phone Technology-"
+echo "--------------------------------------------------"
