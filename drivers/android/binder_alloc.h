@@ -24,6 +24,8 @@
 #include <linux/list_lru.h>
 
 extern struct list_lru binder_alloc_lru;
+#define BINDER_MIN_ALLOC (1 * PAGE_SIZE)
+
 struct binder_transaction;
 
 /**
@@ -50,8 +52,7 @@ struct binder_buffer {
 	unsigned free:1;
 	unsigned allow_user_free:1;
 	unsigned async_transaction:1;
-	unsigned free_in_progress:1;
-	unsigned debug_id:28;
+	unsigned debug_id:29;
 
 	struct binder_transaction *transaction;
 

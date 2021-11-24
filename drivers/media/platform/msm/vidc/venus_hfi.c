@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +9,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2013 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
  */
 
 #include <asm/dma-iommu.h>
@@ -1652,7 +1657,7 @@ static int __iface_cmdq_write_relaxed(struct venus_hfi_device *device,
 	__strict_check(device);
 
 	if (!__core_in_valid_state(device)) {
-		dprintk(VIDC_DBG, "%s - fw not in init state\n", __func__);
+		dprintk(VIDC_ERR, "%s - fw not in init state\n", __func__);
 		result = -EINVAL;
 		goto err_q_null;
 	}
@@ -3283,6 +3288,8 @@ static void venus_hfi_pm_handler(struct work_struct *work)
 	const int max_tries = 5;
 	struct venus_hfi_device *device = list_first_entry(
 			&hal_ctxt.dev_head, struct venus_hfi_device, list);
+	char msg[SUBSYS_CRASH_REASON_LEN];
+
 	if (!device) {
 		dprintk(VIDC_ERR, "%s: NULL device\n", __func__);
 		return;
@@ -3296,6 +3303,9 @@ static void venus_hfi_pm_handler(struct work_struct *work)
 		dprintk(VIDC_WARN, "Failed to PC for %d times\n",
 				device->skip_pc_count);
 		device->skip_pc_count = 0;
+		snprintf(msg, sizeof(msg),
+			"Failed to prepare for PC, rc : %d\n", rc);
+		subsystem_crash_reason("venus", msg);
 		__process_fatal_error(device);
 		return;
 	}
@@ -3374,11 +3384,18 @@ exit:
 	return;
 }
 
+static void venus_hfi_crash_reason(struct hfi_sfr_struct *vsfr)
+{
+	char msg[SUBSYS_CRASH_REASON_LEN];
+
+	snprintf(msg, sizeof(msg), "SFR Message from FW : %s",
+						vsfr->rg_data);
+	subsystem_crash_reason("venus", msg);
+}
+
 static void __process_sys_error(struct venus_hfi_device *device)
 {
 	struct hfi_sfr_struct *vsfr = NULL;
-
-	__set_state(device, VENUS_STATE_DEINIT);
 
 	/* Once SYS_ERROR received from HW, it is safe to halt the AXI.
 	 * With SYS_ERROR, Venus FW may have crashed and HW might be
@@ -3398,6 +3415,7 @@ static void __process_sys_error(struct venus_hfi_device *device)
 
 		dprintk(VIDC_ERR, "SFR Message from FW: %s\n",
 				vsfr->rg_data);
+		venus_hfi_crash_reason(vsfr);
 	}
 }
 
@@ -3495,9 +3513,11 @@ static int __response_handler(struct venus_hfi_device *device)
 			}
 		};
 
-		if (vsfr)
+		if (vsfr) {
 			dprintk(VIDC_ERR, "SFR Message from FW: %s\n",
 					vsfr->rg_data);
+			venus_hfi_crash_reason(vsfr);
+		}
 
 		dprintk(VIDC_ERR, "Received watchdog timeout\n");
 		packets[packet_count++] = info;
@@ -3626,6 +3646,10 @@ static int __response_handler(struct venus_hfi_device *device)
 					"Too many packets in message queue to handle at once, deferring read\n");
 			break;
 		}
+
+		/* do not read packets after sys error packet */
+		if (info->response_type == HAL_SYS_ERROR)
+			break;
 	}
 
 	if (requeue_pm_work && device->res->sw_power_collapsible) {
@@ -3688,6 +3712,12 @@ err_no_work:
 		i < num_responses; ++i) {
 		struct msm_vidc_cb_info *r = &device->response_pkt[i];
 
+		if (!__core_in_valid_state(device)) {
+			dprintk(VIDC_ERR,
+				"Ignore responses from %d to %d as device is in invalid state",
+				(i + 1), num_responses);
+			break;
+		}
 		device->callback(r->response_type, &r->response);
 	}
 
