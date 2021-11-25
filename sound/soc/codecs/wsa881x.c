@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -818,7 +818,9 @@ static int wsa881x_rdac_event(struct snd_soc_dapm_widget *w,
 					    wsa881x->swr_slave->dev_num,
 					    false);
 		wsa881x_boost_ctrl(codec, DISABLE);
+		mutex_lock(&wsa881x->temp_lock);
 		wsa881x_resource_acquire(codec, DISABLE);
+		mutex_unlock(&wsa881x->temp_lock);
 		break;
 	}
 	return 0;
@@ -1238,6 +1240,8 @@ static int wsa881x_swr_probe(struct swr_device *pdev)
 	if (wsa881x->wsa_rst_np)
 		pin_state_current = msm_cdc_pinctrl_get_state(
 						wsa881x->wsa_rst_np);
+	mutex_init(&wsa881x->res_lock);
+	mutex_init(&wsa881x->temp_lock);
 	wsa881x_gpio_ctrl(wsa881x, true);
 	wsa881x->state = WSA881X_DEV_UP;
 
@@ -1392,7 +1396,6 @@ static int wsa881x_swr_reset(struct swr_device *pdev)
 	}
 	pdev->dev_num = devnum;
 	wsa881x_regcache_sync(wsa881x);
-
 	return 0;
 }
 
