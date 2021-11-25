@@ -1,0 +1,7 @@
+config LDO_VIBRATOR
+	tristate "LDO Vibrator"
+	default n
+	help
+	  This option enables device driver support for the vibrator
+	  on the LDO line. The vibrator is controlled using the
+	  timed output class.

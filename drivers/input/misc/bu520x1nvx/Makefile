@@ -1,0 +1,1 @@
+obj-$(CONFIG_INPUT_BU520X1NVX)		+= bu520x1nvx.o

@@ -833,6 +833,8 @@ config INPUT_DRV2667_HAPTICS
 	  module will be called drv2667-haptics.
 
 source "drivers/input/misc/ots_pat9125/Kconfig"
+source "drivers/input/misc/bu520x1nvx/Kconfig"
+source "drivers/input/misc/fpc1145/Kconfig"
 
 config INPUT_STMVL53L0
 	tristate "STM VL53L0 Proximity support"

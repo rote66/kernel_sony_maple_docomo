@@ -1,0 +1,1 @@
+obj-$(CONFIG_LDO_VIBRATOR)	+= ldo_vibrator.o

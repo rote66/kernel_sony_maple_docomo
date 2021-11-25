@@ -18,6 +18,22 @@ find -name "*.ko" -exec mv {} ../magisk_module/system/lib/modules \;
 cd ..
 repack_zip/emp/strip --strip-unneeded magisk_module/system/lib/modules/*
 mv magisk_module/system/lib/modules/wlan.ko magisk_module/system/lib/modules/qca_cld3_wlan.ko
+###fake modules
+touch magisk_module/system/lib/modules/bu520x1nvx.ko
+touch magisk_module/system/lib/modules/fpc1145_platform.ko
+touch magisk_module/system/lib/modules/ldo_vibrator.ko
+touch magisk_module/system/lib/modules/mpq-adapter.ko
+touch magisk_module/system/lib/modules/mpq-dmx-hw-plugin.ko
+touch magisk_module/system/lib/modules/br_netfilter.ko
+touch magisk_module/system/lib/modules/gspca_main.ko
+touch magisk_module/system/lib/modules/kscl.ko
+touch magisk_module/system/lib/modules/sim_detect.ko
+touch magisk_module/system/lib/modules/rdbg.ko
+touch magisk_module/system/lib/modules/msm_11ad_proxy.ko
+touch magisk_module/system/lib/modules/sony_carillon_nfc.ko
+touch magisk_module/system/lib/modules/test-iosched.ko
+touch magisk_module/system/lib/modules/tspp.ko
+touch magisk_module/system/lib/modules/ufs_test.ko
 #touch magisk_module/system/lib/modules/texfat.ko
 
 cd repack_zip

@@ -1,0 +1,5 @@
+ config FPC1145_PLATFORM
+       tristate "Platform FPC1145 fingerprint driver"
+       default n
+       help
+         Select this module to enable FPC1145 fingerprint driver
