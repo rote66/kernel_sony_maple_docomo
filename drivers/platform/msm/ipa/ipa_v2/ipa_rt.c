@@ -1412,7 +1412,7 @@ int ipa2_reset_rt(enum ipa_ip_type ip, bool user_only)
 						rule->rule.hdr_proc_ctx_hdl);
 					if (!hdr_proc_entry ||
 						hdr_proc_entry->cookie !=
-						IPA_PROC_HDR_COOKIE) {
+							IPA_PROC_HDR_COOKIE) {
 					IPAERR_RL(
 						"Proc entry already deleted\n");
 						return -EINVAL;
