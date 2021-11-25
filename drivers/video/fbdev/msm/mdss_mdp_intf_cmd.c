@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2195,13 +2195,6 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 				mdss_dsi_panel_driver_dump_incell_sts(incell);
 #endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 			MDSS_XLOG(0xbad);
-			MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0_ctrl", "dsi0_phy",
-				"dsi1_ctrl", "dsi1_phy", "vbif", "vbif_nrt",
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-				"dbg_bus", "vbif_dbg_bus", "dsi_dbg_bus");
-#else
-				"dbg_bus", "vbif_dbg_bus", "dsi_dbg_bus", "panic");
-#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 		} else if (ctx->pp_timeout_report_cnt == MAX_RECOVERY_TRIALS) {
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 			if (spec_pdata->esd_enable_without_xlog
