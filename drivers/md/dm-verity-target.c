@@ -244,8 +244,8 @@ static int verity_handle_err(struct dm_verity *v, enum verity_block_type type,
 		BUG();
 	}
 
-	DMERR("%s: %s block %llu is corrupted", v->data_dev->name, type_str,
-		block);
+	DMERR_LIMIT("%s: %s block %llu is corrupted", v->data_dev->name,
+		    type_str, block);
 
 #ifdef CONFIG_PANIC_ON_DM_VERITY_ERRORS
 	if (dm_verity_panic_on_err) {
