@@ -2077,27 +2077,23 @@ static int check_vma_flags(struct vm_area_struct *vma,
 	return -EFAULT;
 }
 
-static int check_vma(unsigned long hostptr, u64 size)
+static int check_vma(struct vm_area_struct *vma, struct file *vmfile,
+		struct kgsl_memdesc *memdesc)
 {
-	struct vm_area_struct *vma;
-	unsigned long cur = hostptr;
+	if (vma == NULL || vma->vm_file != vmfile)
+		return -EINVAL;
 
-	while (cur < (hostptr + size)) {
-		vma = find_vma(current->mm, cur);
-		if (!vma)
-			return false;
-
-		/* Don't remap memory that we already own */
-		if (vma->vm_file && vma->vm_file->f_op == &kgsl_fops)
-			return false;
-
-		cur = vma->vm_end;
-	}
-
-	return true;
+	/* userspace may not know the size, in which case use the whole vma */
+	if (memdesc->size == 0)
+		memdesc->size = vma->vm_end - vma->vm_start;
+	/* range checking */
+	if (vma->vm_start != memdesc->useraddr ||
+		(memdesc->useraddr + memdesc->size) != vma->vm_end)
+		return -EINVAL;
+	return check_vma_flags(vma, memdesc->flags);
 }
 
-static int memdesc_sg_virt(struct kgsl_memdesc *memdesc, unsigned long useraddr)
+static int memdesc_sg_virt(struct kgsl_memdesc *memdesc, struct file *vmfile)
 {
 	int ret = 0;
 	long npages = 0, i;
@@ -2119,17 +2115,19 @@ static int memdesc_sg_virt(struct kgsl_memdesc *memdesc, unsigned long useraddr)
 	}
 
 	down_read(&current->mm->mmap_sem);
-        if (!check_vma(useraddr, memdesc->size)) {
-		up_read(&current->mm->mmap_sem);
-		ret = ~EFAULT;
-		goto out;
-	}
+	/* If we have vmfile, make sure we map the correct vma and map it all */
+	if (vmfile != NULL)
+		ret = check_vma(find_vma(current->mm, memdesc->useraddr),
+				vmfile, memdesc);
 
-        npages = get_user_pages(current, current->mm, useraddr,
-				sglen, write ? FOLL_WRITE : 0, pages, NULL);
+	if (ret == 0) {
+		npages = get_user_pages(current, current->mm, memdesc->useraddr,
+					sglen, write ? FOLL_WRITE : 0,
+					pages, NULL);
+		ret = (npages < 0) ? (int)npages : 0;
+	}
 	up_read(&current->mm->mmap_sem);
 
-	ret = (npages < 0) ? (int)npages : 0;
 	if (ret)
 		goto out;
 
@@ -2158,33 +2156,29 @@ static int kgsl_setup_anon_useraddr(struct kgsl_pagetable *pagetable,
 {
 	/* Map an anonymous memory chunk */
 
-        int ret;
 	if (size == 0 || offset != 0 ||
 		!IS_ALIGNED(size, PAGE_SIZE))
 		return -EINVAL;
 
 	entry->memdesc.pagetable = pagetable;
 	entry->memdesc.size = (uint64_t) size;
+	entry->memdesc.useraddr = hostptr;
 	entry->memdesc.flags |= KGSL_MEMFLAGS_USERMEM_ADDR;
 
 	if (kgsl_memdesc_use_cpu_map(&entry->memdesc)) {
+		int ret;
 
 		/* Register the address in the database */
 		ret = kgsl_mmu_set_svm_region(pagetable,
-                         (uint64_t) hostptr, (uint64_t) size);
+			(uint64_t) entry->memdesc.useraddr, (uint64_t) size);
 
 		if (ret)
 			return ret;
 
-                entry->memdesc.gpuaddr = (uint64_t) hostptr;
+		entry->memdesc.gpuaddr = (uint64_t)  entry->memdesc.useraddr;
 	}
 
-        ret = memdesc_sg_virt(&entry->memdesc, hostptr);
-
-	if (ret && kgsl_memdesc_use_cpu_map(&entry->memdesc))
-		kgsl_mmu_put_gpuaddr(&entry->memdesc);
-
-	return ret;
+	return memdesc_sg_virt(&entry->memdesc, NULL);
 }
 
 static int match_file(const void *p, struct file *file, unsigned int fd)
