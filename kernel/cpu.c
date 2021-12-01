@@ -557,7 +557,6 @@ out_notify:
 out:
 	cpu_hotplug_done();
 	trace_sched_cpu_hotplug(cpu, ret, 1);
-
 	arch_smt_update();
 	return ret;
 }
