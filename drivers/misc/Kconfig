@@ -680,4 +680,5 @@ source "drivers/misc/cxl/Kconfig"
 source "drivers/misc/mm_tuner/Kconfig"
 source "drivers/misc/ldo_vibrator/Kconfig"
 source "drivers/misc/sim_detect/Kconfig"
+source "drivers/misc/carillon/Kconfig"
 endmenu

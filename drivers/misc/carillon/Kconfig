@@ -1,5 +1,5 @@
 comment "Sony Carillon NFC driver"
 
-config NFC_CARILLON
+config CARILLON_NFC
 	tristate "Sony Carillon protocol driver (I2C) devices"
 	default n
