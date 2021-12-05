@@ -646,8 +646,10 @@ KBUILD_CFLAGS   += -O3
 endif
 
 ifeq ($(cc-name),clang)
-KBUILD_CFLAGS += -mcpu=cortex-a53 -mtune=cortex-a53
-KBUILD_AFLAGS += -mcpu=cortex-a53 -mtune=cortex-a53
+ifdef CONFIG_ARCH_MSM8998
+KBUILD_CFLAGS	+= $(call cc-option,-march=armv8-a+crc+crypto -mcpu=cortex-a73.cortex-a53+crc+crypto) -mtune=cortex-a53
+KBUILD_AFLAGS	+= $(call cc-option,-march=armv8-a+crc+crypto -mcpu=cortex-a73.cortex-a53+crc+crypto) -mtune=cortex-a53
+endif
 KBUILD_CFLAGS	+= $(call cc-option, -mllvm -polly) \
 		   $(call cc-option, -mllvm -polly-run-dce) \
 		   $(call cc-option, -mllvm -polly-run-inliner) \
