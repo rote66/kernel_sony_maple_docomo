@@ -2,10 +2,10 @@ Sony Xperia XZ Permium JP Verison Customized Kernel.
   For SO-04J/G8188 stock Android PIE ROM
 
   defconfig using:
-    maple_docomo_defconfig
+    maple_dcm_defconfig
 
 Features:
-   hmp/eas(walt)
+   eas(walt)
    And see commits....
 
 How to build kernel:
@@ -18,7 +18,7 @@ How to build kernel:
       In case of this platform, we recommend to use gcc 4.9 or later
       such as aarch64-linux-android-4.9 to avoid known issues.
       
-    * In emp/emp-hmp branch must use gcc 5 or later
+    * In emp-remastered please use clang compiler
 
 
   Step 1: Build Your Kernel
@@ -26,22 +26,20 @@ How to build kernel:
 
     $ export ARCH=arm64
 
-    $ export PATH=<path-to-cross-compiler-executables>:$PATH
-      NOTE: Please set the location of the ARM cross-compiler.
+    $ make maple_dcm_defconfig O=./out
 
-    $ export CROSS_COMPILE=<toolchain-prefix>
-      NOTE: Please set the prefix of the ARM cross-compiler.
-            ex) aarch64-linux-android-
-
-    $ make maple_docomo_defconfig O=./out
-
-    $ make O=./out
+    $ PATH="<path to clang folder>/bin:<path to 64-bit gcc folder>/bin:${PATH}" \
+      make -j$(nproc --all) O=out \
+                      ARCH=arm64 \
+                      CC=clang \
+                      CLANG_TRIPLE=aarch64-linux-gnu- \
+                      CROSS_COMPILE=aarch64-linux-android-
 
     You can see arch/arm64/boot/Image-dtb if you succeed in building.
 
 
   Step 2: Repack to flashable zip
     (In the Linux Kernel directory)
-    (In test,flash location is FOTAKernel.Please git revert d72af961457cc94c2037a86e9e6221a42d7a60c5
+    (In test,flash location is FOTAKernel.Please manual modify updater-script
     $ ./repack
 
