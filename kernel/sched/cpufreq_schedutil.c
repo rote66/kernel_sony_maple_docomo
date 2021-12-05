@@ -71,7 +71,6 @@ struct sugov_cpu {
 	unsigned int iowait_boost;
 	unsigned int iowait_boost_max;
 	u64 last_update;
-	unsigned int		cpu;
 
 	/* The fields below are only needed when sharing a policy. */
 	unsigned long util;
