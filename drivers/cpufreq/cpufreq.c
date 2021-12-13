@@ -434,7 +434,7 @@ scale_min_freq_capacity(const cpumask_t *cpus, unsigned long policy_min_freq)
 	if (cpu >= nr_cpu_ids)
 		return;
 
-	max_freq = per_cpu(max_freq_cpu, cpu);
+	max_freq = per_cpu(max_cpu_freq, cpu);
 
 	if (!max_freq)
 		return;
