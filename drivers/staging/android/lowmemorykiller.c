@@ -262,8 +262,9 @@ module_param_named(adj_max_shift, adj_max_shift, short,
 
 /* User knob to enable/disable adaptive lmk feature */
 static int enable_adaptive_lmk = 0;
-// module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int,
-//		   S_IRUGO | S_IWUSR);
+static int enable_adaptive_lmk_dummy;
+module_param_named(enable_adaptive_lmk, enable_adaptive_lmk_dummy, int,
+		   S_IRUGO | S_IWUSR);
 
 /*
  * This parameter controls the behaviour of LMK when vmpressure is in
@@ -324,7 +325,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 		other_free = global_page_state(NR_FREE_PAGES);
 
 		atomic_set(&shift_adj, 1);
-//		trace_almk_vmpressure(pressure, other_free, other_file);
+		trace_almk_vmpressure(pressure, other_free, other_file);
 	} else if (pressure >= 90) {
 		if (lowmem_adj_size < array_size)
 			array_size = lowmem_adj_size;
@@ -341,7 +342,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 		if ((other_free < lowmem_minfree[array_size - 1]) &&
 		    (other_file < vmpressure_file_min)) {
 			atomic_set(&shift_adj, 1);
-//			trace_almk_vmpressure(pressure, other_free, other_file);
+			trace_almk_vmpressure(pressure, other_free, other_file);
 		}
 	} else if (atomic_read(&shift_adj)) {
 		other_file = global_page_state(NR_FILE_PAGES) + zcache_pages() -
@@ -355,7 +356,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 		 * Since vmpressure has improved, reset shift_adj to avoid
 		 * false adaptive LMK trigger.
 		 */
-//		trace_almk_vmpressure(pressure, other_free, other_file);
+		trace_almk_vmpressure(pressure, other_free, other_file);
 		atomic_set(&shift_adj, 0);
 	}
 #ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_TNG
@@ -595,7 +596,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 			other_file, min_score_adj);
 
 	if (min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
-//		trace_almk_shrink(0, ret, other_free, other_file, 0);
+		trace_almk_shrink(0, ret, other_free, other_file, 0);
 		lowmem_print(5, "lowmem_scan %lu, %x, return 0\n",
 			     sc->nr_to_scan, sc->gfp_mask);
 		trace_lmk_remain_scan(0, sc->nr_to_scan, sc->gfp_mask);
@@ -671,7 +672,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		cache_size = other_file * (long)(PAGE_SIZE / 1024);
 		cache_limit = minfree * (long)(PAGE_SIZE / 1024);
 		free = other_free * (long)(PAGE_SIZE / 1024);
-//		trace_lowmemory_kill(selected, cache_size, cache_limit, free);
+		trace_lowmemory_kill(selected, cache_size, cache_limit, free);
 		lowmem_print(1, "Killing '%s' (%d) (tgid %d), adj %hd,\n" \
 			        "   to free %ldkB on behalf of '%s' (%d) because\n" \
 			        "   cache %ldkB is below limit %ldkB for oom_score_adj %hd\n" \
@@ -711,12 +712,12 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 				 selected_oom_score_adj, selected_tasksize,
 				 sc->gfp_mask);
 		rcu_read_unlock();
-//		trace_almk_shrink(selected_tasksize, ret,
-//				  other_free, other_file,
-//				  selected_oom_score_adj);
+		trace_almk_shrink(selected_tasksize, ret,
+				  other_free, other_file,
+				  selected_oom_score_adj);
 		lmk_inc_stats(LMK_KILL);
 	} else {
-//		trace_almk_shrink(1, ret, other_free, other_file, 0);
+		trace_almk_shrink(1, ret, other_free, other_file, 0);
 		lmk_inc_stats(LMK_WASTE);
 		rcu_read_unlock();
 	}
