@@ -2993,7 +2993,7 @@ void set_task_rq_fair(struct sched_entity *se,
 		n_last_update_time = next->avg.last_update_time;
 #endif
 		__update_load_avg(p_last_update_time, cpu_of(rq_of(prev)),
-				  &se->avg, 0, 0, NULL);
+				  &se->avg, 0, 0, NULL, NULL);
 		se->avg.last_update_time = n_last_update_time;
 	}
 }
@@ -3243,7 +3243,7 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
 	}
 
 	decayed = __update_load_avg(now, cpu_of(rq_of(cfs_rq)), sa,
-		scale_load_down(cfs_rq->load.weight), cfs_rq->curr != NULL, cfs_rq);
+		scale_load_down(cfs_rq->load.weight), cfs_rq->curr != NULL, cfs_rq, NULL);
 
 #ifndef CONFIG_64BIT
 	smp_wmb();
@@ -3264,7 +3264,7 @@ int update_rt_rq_load_avg(u64 now, int cpu, struct rt_rq *rt_rq, int running)
 {
 	int ret;
 
-	ret = ___update_load_avg(now, cpu, &rt_rq->avg, running, running, NULL, rt_rq);
+	ret = __update_load_avg(now, cpu, &rt_rq->avg, running, running, NULL, rt_rq);
 
 	return ret;
 }
@@ -3292,7 +3292,7 @@ static inline void update_load_avg(struct sched_entity *se, int flags)
 	if (se->avg.last_update_time && !(flags & SKIP_AGE_LOAD)) {
 		__update_load_avg(now, cpu, &se->avg,
 			  se->on_rq * scale_load_down(se->load.weight),
-			  cfs_rq->curr == se, NULL);
+			  cfs_rq->curr == se, NULL, NULL);
 	}
 
 	decayed  = update_cfs_rq_load_avg(now, cfs_rq, !(flags & SKIP_CPUFREQ));
@@ -3405,7 +3405,7 @@ void sync_entity_load_avg(struct sched_entity *se)
 	u64 last_update_time;
 
 	last_update_time = cfs_rq_last_update_time(cfs_rq);
-	__update_load_avg(last_update_time, cpu_of(rq_of(cfs_rq)), &se->avg, 0, 0, NULL);
+	__update_load_avg(last_update_time, cpu_of(rq_of(cfs_rq)), &se->avg, 0, 0, NULL, NULL);
 }
 
 /*
@@ -5719,8 +5719,7 @@ static unsigned long cpu_util_without(int cpu, struct task_struct *p)
 		 * reducing the chances for the above race.
 		 */
 		if (unlikely(task_on_rq_queued(p) || current == p)) {
-			estimated -= min_t(unsigned int, estimated,
-					   (_task_util_est(p) | UTIL_AVG_UNCHANGED));
+			estimated -= min_t(unsigned int, estimated,_task_util_est(p));
 		}
 		util = max(util, estimated);
 	}
