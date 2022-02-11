@@ -1,5 +1,5 @@
 #zram-writeback
 ro.zram.mark_idle_delay_mins=60
-ro.zram.first_wb_delay_mins=1440
+ro.zram.first_wb_delay_mins=140
 ro.zram.periodic_wb_delay_hours=24
 #zram.force_writeback=false
