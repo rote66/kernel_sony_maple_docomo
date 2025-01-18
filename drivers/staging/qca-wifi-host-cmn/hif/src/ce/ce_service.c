@@ -2349,4 +2349,3 @@ void ce_ipa_get_resource(struct CE_handle *ce,
 			SR_WR_INDEX_ADDRESS;
 }
 #endif /* IPA_OFFLOAD */
-
