@@ -3,6 +3,8 @@ Sony Xperia XZ Permium JP Verison Customized Kernel.
 
   defconfig using:
     maple_dcm_defconfig
+  if need force 4k:
+    maple_dcm_4k_defconfig
 
 Features:
    eas(walt)
@@ -18,8 +20,15 @@ How to build kernel:
       In case of this platform, we recommend to use gcc 4.9 or later
       such as aarch64-linux-android-4.9 to avoid known issues.
       
+      [LineageOS/gcc4.9/aarch64](https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9)
+      [LineageOS/gcc4.9/arm](https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9
+      (branch lineage-19.1 test passed)
+      
     * In emp-remastered please use clang compiler
 
+    * [Clang](https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/)
+    (r530567 test passed)
+    
 
   Step 1: Build Your Kernel
     $ cd <your-kernel-dir>
@@ -28,12 +37,14 @@ How to build kernel:
 
     $ make maple_dcm_defconfig O=./out
 
-    $ PATH="<path to clang folder>/bin:<path to 64-bit gcc folder>/bin:${PATH}" \
+    $ PATH="<path to clang folder>/bin:<path to 64-bit gcc folder>/bin:<path to 32-bit gcc folder>/bin:${PATH}" \
       make -j$(nproc --all) O=out \
                       ARCH=arm64 \
                       CC=clang \
                       CLANG_TRIPLE=aarch64-linux-gnu- \
-                      CROSS_COMPILE=aarch64-linux-android-
+                      CROSS_COMPILE=aarch64-linux-android- \
+                      CROSS_COMPILE_ARM32=arm-linux-androideabi- 
+          
 
     You can see arch/arm64/boot/Image-dtb if you succeed in building.
 
