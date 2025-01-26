@@ -586,6 +586,8 @@ static void psi_poll_work(struct kthread_work *work)
 	dwork = container_of(work, struct kthread_delayed_work, work);
 	group = container_of(dwork, struct psi_group, poll_work);
 
+	pr_info("PSI: Poll work started\n");
+
 	atomic_set(&group->poll_scheduled, 0);
 
 	mutex_lock(&group->trigger_lock);
@@ -621,6 +623,7 @@ static void psi_poll_work(struct kthread_work *work)
 
 out:
 	mutex_unlock(&group->trigger_lock);
+	pr_info("PSI: Poll work finished\n");
 }
 
 static void record_times(struct psi_group_cpu *groupc, int cpu,
@@ -1011,31 +1014,50 @@ struct psi_trigger *psi_trigger_create(struct psi_group *group,
 	enum psi_states state;
 	u32 threshold_us;
 	u32 window_us;
+	
+	pr_info("PSI: Creating trigger with input: %s\n", buf);
 
 	if (static_branch_likely(&psi_disabled))
 		return ERR_PTR(-EOPNOTSUPP);
 
-	if (sscanf(buf, "some %u %u", &threshold_us, &window_us) == 2)
+	if (sscanf(buf, "some %u %u", &threshold_us, &window_us) == 2){
 		state = PSI_IO_SOME + res * 2;
-	else if (sscanf(buf, "full %u %u", &threshold_us, &window_us) == 2)
+		pr_info("PSI: Parsed input as 'some', threshold_us=%u, window_us=%u\n", threshold_us, window_us);
+	}
+	else if (sscanf(buf, "full %u %u", &threshold_us, &window_us) == 2){
 		state = PSI_IO_FULL + res * 2;
-	else
+		pr_info("PSI: Parsed input as 'full', threshold_us=%u, window_us=%u\n", threshold_us, window_us);
+	}
+	else{
+		pr_err("PSI: Invalid input format\n");
 		return ERR_PTR(-EINVAL);
+	}
 
-	if (state >= PSI_NONIDLE)
+	if (state >= PSI_NONIDLE){
+		pr_err("PSI: Invalid state detected, state=%d\n", state);
 		return ERR_PTR(-EINVAL);
+	}
 
 	if (window_us < WINDOW_MIN_US ||
-		window_us > WINDOW_MAX_US)
+		window_us > WINDOW_MAX_US){
+		pr_err("PSI: Window size out of range: %u (min: %u, max: %u)\n",
+           window_us, WINDOW_MIN_US, WINDOW_MAX_US);
 		return ERR_PTR(-EINVAL);
+	}
 
 	/* Check threshold */
-	if (threshold_us == 0 || threshold_us > window_us)
+	if (threshold_us == 0 || threshold_us > window_us){
+		pr_err("PSI: Invalid threshold: %u (window: %u)\n", threshold_us, window_us);
 		return ERR_PTR(-EINVAL);
+	}
 
 	t = kmalloc(sizeof(*t), GFP_KERNEL);
-	if (!t)
+	if (!t){
+		pr_err("PSI: Failed to allocate memory for trigger\n");
 		return ERR_PTR(-ENOMEM);
+	}
+
+	pr_info("PSI: Allocated trigger, threshold: %u, window: %u\n", threshold_us, window_us);
 
 	t->group = group;
 	t->state = state;
@@ -1057,6 +1079,7 @@ struct psi_trigger *psi_trigger_create(struct psi_group *group,
 
 		kworker = kthread_create_worker(0, "psimon");
 		if (IS_ERR(kworker)) {
+			pr_err("PSI: Failed to create poll worker, error: %ld\n", PTR_ERR(kworker));
 			kfree(t);
 			mutex_unlock(&group->trigger_lock);
 			return ERR_CAST(kworker);
@@ -1065,6 +1088,7 @@ struct psi_trigger *psi_trigger_create(struct psi_group *group,
 		kthread_init_delayed_work(&group->poll_work,
 				psi_poll_work);
 		rcu_assign_pointer(group->poll_kworker, kworker);
+		pr_info("PSI: Poll worker created\n");
 	}
 
 	list_add(&t->node, &group->triggers);
@@ -1072,9 +1096,12 @@ struct psi_trigger *psi_trigger_create(struct psi_group *group,
 		div_u64(t->win.size, UPDATES_PER_WINDOW));
 	group->nr_triggers[t->state]++;
 	group->poll_states |= (1 << t->state);
+	pr_info("PSI: Trigger added to list, state=%d, poll_min_period=%llu\n",
+        t->state, group->poll_min_period);
 
 	mutex_unlock(&group->trigger_lock);
 
+	pr_info("PSI: Trigger successfully added to group\n");
 	return t;
 }
 
@@ -1177,6 +1204,8 @@ static ssize_t psi_write(struct file *file, const char __user *user_buf,
 	size_t buf_size;
 	struct seq_file *seq;
 	struct psi_trigger *new;
+	
+	pr_info("PSI: psi_write called, resource: %d, nbytes: %zu\n", res, nbytes);
 
 	if (static_branch_likely(&psi_disabled))
 		return -EOPNOTSUPP;
@@ -1189,6 +1218,8 @@ static ssize_t psi_write(struct file *file, const char __user *user_buf,
 		return -EFAULT;
 
 	buf[buf_size - 1] = '\0';
+	
+	pr_info("PSI: Input buffer: %s\n", buf);
 
 	seq = file->private_data;
 
@@ -1198,17 +1229,21 @@ static ssize_t psi_write(struct file *file, const char __user *user_buf,
 	/* Allow only one trigger per file descriptor */
 	if (seq->private) {
 		mutex_unlock(&seq->lock);
+		pr_err("PSI: Trigger already exists for this file descriptor\n");
 		return -EBUSY;
 	}
 
 	new = psi_trigger_create(&psi_system, buf, nbytes, res);
 	if (IS_ERR(new)) {
 		mutex_unlock(&seq->lock);
+		pr_info("PSI: psi_write returning with error: %ld\n", PTR_ERR(new));
 		return PTR_ERR(new);
 	}
 
 	smp_store_release(&seq->private, new);
 	mutex_unlock(&seq->lock);
+	
+	pr_info("PSI: Trigger created successfully\n");
 
 	return nbytes;
 }
