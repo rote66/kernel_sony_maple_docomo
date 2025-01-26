@@ -585,9 +585,9 @@ static void psi_poll_work(struct kthread_work *work)
 
 	dwork = container_of(work, struct kthread_delayed_work, work);
 	group = container_of(dwork, struct psi_group, poll_work);
-
+#ifdef CONFIG_PSI_DEBUG
 	pr_info("PSI: Poll work started\n");
-
+#endif
 	atomic_set(&group->poll_scheduled, 0);
 
 	mutex_lock(&group->trigger_lock);
@@ -623,7 +623,9 @@ static void psi_poll_work(struct kthread_work *work)
 
 out:
 	mutex_unlock(&group->trigger_lock);
+#ifdef CONFIG_PSI_DEBUG
 	pr_info("PSI: Poll work finished\n");
+#endif
 }
 
 static void record_times(struct psi_group_cpu *groupc, int cpu,
@@ -1014,50 +1016,66 @@ struct psi_trigger *psi_trigger_create(struct psi_group *group,
 	enum psi_states state;
 	u32 threshold_us;
 	u32 window_us;
-	
+#ifdef CONFIG_PSI_DEBUG
 	pr_info("PSI: Creating trigger with input: %s\n", buf);
+#endif	
 
 	if (static_branch_likely(&psi_disabled))
 		return ERR_PTR(-EOPNOTSUPP);
 
 	if (sscanf(buf, "some %u %u", &threshold_us, &window_us) == 2){
 		state = PSI_IO_SOME + res * 2;
+#ifdef CONFIG_PSI_DEBUG
 		pr_info("PSI: Parsed input as 'some', threshold_us=%u, window_us=%u\n", threshold_us, window_us);
+#endif
 	}
 	else if (sscanf(buf, "full %u %u", &threshold_us, &window_us) == 2){
 		state = PSI_IO_FULL + res * 2;
+#ifdef CONFIG_PSI_DEBUG
 		pr_info("PSI: Parsed input as 'full', threshold_us=%u, window_us=%u\n", threshold_us, window_us);
+#endif
 	}
 	else{
+#ifdef CONFIG_PSI_DEBUG
 		pr_err("PSI: Invalid input format\n");
+#endif
 		return ERR_PTR(-EINVAL);
 	}
 
 	if (state >= PSI_NONIDLE){
+#ifdef CONFIG_PSI_DEBUG
 		pr_err("PSI: Invalid state detected, state=%d\n", state);
+#endif
 		return ERR_PTR(-EINVAL);
 	}
 
 	if (window_us < WINDOW_MIN_US ||
 		window_us > WINDOW_MAX_US){
+#ifdef CONFIG_PSI_DEBUG
 		pr_err("PSI: Window size out of range: %u (min: %u, max: %u)\n",
            window_us, WINDOW_MIN_US, WINDOW_MAX_US);
+#endif
 		return ERR_PTR(-EINVAL);
 	}
 
 	/* Check threshold */
 	if (threshold_us == 0 || threshold_us > window_us){
+#ifdef CONFIG_PSI_DEBUG
 		pr_err("PSI: Invalid threshold: %u (window: %u)\n", threshold_us, window_us);
+#endif
 		return ERR_PTR(-EINVAL);
 	}
 
 	t = kmalloc(sizeof(*t), GFP_KERNEL);
 	if (!t){
+#ifdef CONFIG_PSI_DEBUG
 		pr_err("PSI: Failed to allocate memory for trigger\n");
+#endif
 		return ERR_PTR(-ENOMEM);
 	}
-
+#ifdef CONFIG_PSI_DEBUG
 	pr_info("PSI: Allocated trigger, threshold: %u, window: %u\n", threshold_us, window_us);
+#endif	
 
 	t->group = group;
 	t->state = state;
@@ -1079,7 +1097,9 @@ struct psi_trigger *psi_trigger_create(struct psi_group *group,
 
 		kworker = kthread_create_worker(0, "psimon");
 		if (IS_ERR(kworker)) {
+#ifdef CONFIG_PSI_DEBUG
 			pr_err("PSI: Failed to create poll worker, error: %ld\n", PTR_ERR(kworker));
+#endif	
 			kfree(t);
 			mutex_unlock(&group->trigger_lock);
 			return ERR_CAST(kworker);
@@ -1088,7 +1108,9 @@ struct psi_trigger *psi_trigger_create(struct psi_group *group,
 		kthread_init_delayed_work(&group->poll_work,
 				psi_poll_work);
 		rcu_assign_pointer(group->poll_kworker, kworker);
+#ifdef CONFIG_PSI_DEBUG
 		pr_info("PSI: Poll worker created\n");
+#endif
 	}
 
 	list_add(&t->node, &group->triggers);
@@ -1096,12 +1118,15 @@ struct psi_trigger *psi_trigger_create(struct psi_group *group,
 		div_u64(t->win.size, UPDATES_PER_WINDOW));
 	group->nr_triggers[t->state]++;
 	group->poll_states |= (1 << t->state);
+#ifdef CONFIG_PSI_DEBUG
 	pr_info("PSI: Trigger added to list, state=%d, poll_min_period=%llu\n",
         t->state, group->poll_min_period);
+#endif
 
 	mutex_unlock(&group->trigger_lock);
-
+#ifdef CONFIG_PSI_DEBUG
 	pr_info("PSI: Trigger successfully added to group\n");
+#endif
 	return t;
 }
 
@@ -1204,8 +1229,9 @@ static ssize_t psi_write(struct file *file, const char __user *user_buf,
 	size_t buf_size;
 	struct seq_file *seq;
 	struct psi_trigger *new;
-	
+#ifdef CONFIG_PSI_DEBUG
 	pr_info("PSI: psi_write called, resource: %d, nbytes: %zu\n", res, nbytes);
+#endif
 
 	if (static_branch_likely(&psi_disabled))
 		return -EOPNOTSUPP;
@@ -1218,8 +1244,9 @@ static ssize_t psi_write(struct file *file, const char __user *user_buf,
 		return -EFAULT;
 
 	buf[buf_size - 1] = '\0';
-	
+#ifdef CONFIG_PSI_DEBUG
 	pr_info("PSI: Input buffer: %s\n", buf);
+#endif
 
 	seq = file->private_data;
 
@@ -1229,21 +1256,26 @@ static ssize_t psi_write(struct file *file, const char __user *user_buf,
 	/* Allow only one trigger per file descriptor */
 	if (seq->private) {
 		mutex_unlock(&seq->lock);
+#ifdef CONFIG_PSI_DEBUG
 		pr_err("PSI: Trigger already exists for this file descriptor\n");
+#endif
 		return -EBUSY;
 	}
 
 	new = psi_trigger_create(&psi_system, buf, nbytes, res);
 	if (IS_ERR(new)) {
 		mutex_unlock(&seq->lock);
+#ifdef CONFIG_PSI_DEBUG
 		pr_info("PSI: psi_write returning with error: %ld\n", PTR_ERR(new));
+#endif
 		return PTR_ERR(new);
 	}
 
 	smp_store_release(&seq->private, new);
 	mutex_unlock(&seq->lock);
-	
+#ifdef CONFIG_PSI_DEBUG
 	pr_info("PSI: Trigger created successfully\n");
+#endif
 
 	return nbytes;
 }
