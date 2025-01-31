@@ -8,6 +8,7 @@ Sony Xperia XZ Permium JP Verison Customized Kernel.
 
 Features:
    eas(walt)
+   PSI
    And see commits....
 
 How to build kernel:
@@ -54,3 +55,11 @@ How to build kernel:
     (In test,flash location is FOTAKernel.Please manual modify updater-script
     $ ./repack
 
+  Step 3: Manually modify init.rc in boot.img
+  	refer:https://android.googlesource.com/platform/system/core/+/c638569c2ebdc36f93a05190cd52dc08f4321d1b%5E%21/#F0
+  	https://android.googlesource.com/platform/system/core/+/3280e48847e5dd16521ad7040d53eb30b66bf740
+  	https://android.googlesource.com/platform/system/core/+/f8a7e37b2de50eb7a2bcd59b305adb8f68f204c1%5E%21/#F0
+  	https://android.googlesource.com/platform/system/core/+/64d97d87611a39163aa121f17214f4a846954cee%5E%21/#F3
+  	
+  Step 4: If cannot bootable,selinux set to permissive 
+  	

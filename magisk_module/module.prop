@@ -1,6 +1,6 @@
 id=SO-04J_EMPIII
 name=SO-04J_EMP_kernel_modules
-version=v3
-versionCode=3
+version=v5
+versionCode=5
 author=rote66
 description=SO-04J EMPIII撕裂者内核模块 systemless补丁

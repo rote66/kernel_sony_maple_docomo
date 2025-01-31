@@ -6,9 +6,7 @@ SUB=$2
 rm -f repack_zip/emp/zImage
 rm -f magisk_module/system/lib/modules/*.ko
 
-if [ ! -d magisk_module/system ]; then
-	mkdir magisk_module/system
-	mkdir magisk_module/system/lib
+if [ ! -d magisk_module/system/lib/modules ]; then
 	mkdir magisk_module/system/lib/modules
 fi
 

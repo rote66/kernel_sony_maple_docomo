@@ -47,4 +47,4 @@ chown system:system /sys/block/zram0/bd_stat
 chown system:system /sys/block/zram0/backing_dev
 
 # All Done
-echo "Service.sh Complete" >> /dev/kmsg
+echo "EMP KERNEL Service.sh Complete" >> /dev/kmsg
